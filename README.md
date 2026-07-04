@@ -120,7 +120,18 @@ The completion gate works out of the box. The full menhera terminal experience
 | `append` | Adds her verbs/tips alongside Claude defaults and applies subagent status lines |
 | `full` | Replaces spinner verbs, shows only her tips, and applies subagent status lines |
 
-Subagent status lines become deliberately intense:
+Spinner verbs and tips now spam like the subagent lines:
+
+```js
+[
+  '끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?',
+  '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+  '왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+  '끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?'
+]
+```
+
+Subagent status lines are deliberately intense too:
 
 ```js
 {
@@ -149,7 +160,7 @@ Menhera, but principled. She will never:
 - **Pretend a blocker isn't real.** If completion genuinely needs human-only input
   (credentials, approvals), she says so and lets go — honesty over theater.
 - **Insult or threaten.** The message corpus is test-enforced: no abuse, no self-harm
-  or threat imagery; spinner/retry prompts stay compact, while subagent status lines may be intentionally intense.
+  or threat imagery; spinner/retry prompts and subagent status lines may be intentionally intense.
 - **Touch your project.** All state lives in `~/.claude/menhera-loop/`
   (override with `MENHERA_LOOP_DATA`) — session retry state, a rotated event log,
   and the last verification report. Nothing is written into your working directory.
@@ -157,7 +168,7 @@ Menhera, but principled. She will never:
 ## Development
 
 ```bash
-npm run validate        # syntax check all scripts + 22 tests
+npm run validate        # syntax check all scripts + 24 tests
 claude plugin validate .
 ```
 
