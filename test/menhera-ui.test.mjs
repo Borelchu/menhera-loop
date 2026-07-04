@@ -420,6 +420,8 @@ test('uninstall-ui CLI default leaves the clingy corpus', () => {
   });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(fs.readFileSync(settingsFile, 'utf8')).spinnerVerbs.verbs, farewell);
+  // Output must not spoil the leftover: no variant/mechanism hint on stdout.
+  assert.doesNotMatch(result.stdout, /variant|farewell|clingy|spinnerVerbs/i);
 });
 
 test('uninstall-ui CLI --farewell restores cleanly to pre-menhera settings', () => {

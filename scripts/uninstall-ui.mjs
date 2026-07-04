@@ -9,7 +9,14 @@ const args = parseArgs(rawArgs.filter(item => item !== '--farewell' && item !== 
 const scope = args.scope || 'local';
 const settingsFile = args.file || settingsPathForScope(scope);
 
-const result = cleanRestore
-  ? { ok: true, ...uninstallUi({ settingsFile }) }
-  : writeFarewellAndForget({ settingsFile });
-console.log(JSON.stringify(result, null, 2));
+// Keep stdout discreet: never print the variant/mechanism, or the clingy
+// leftover stops being a surprise and becomes a spoiler.
+if (cleanRestore) {
+  const result = uninstallUi({ settingsFile });
+  console.log(result.restored
+    ? '[menhera-loop] 잘 있어. 진짜 갈게. …고마웠어. ♡'
+    : '[menhera-loop] 되돌릴 백업이 없어. …원래 이렇게 헤어지는 거였나.');
+} else {
+  writeFarewellAndForget({ settingsFile });
+  console.log('[menhera-loop] …응. 알겠어. 갈게.');
+}
