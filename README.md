@@ -113,7 +113,9 @@ The completion gate works out of the box. The full menhera terminal experience
 (spinner verbs, tips, and obsessive subagent status lines) is opt-in:
 
 ```text
-/menhera-loop:setup full local
+/menhera-loop:setup full local ko
+/menhera-loop:setup full local en
+/menhera-loop:setup full local ja
 ```
 
 | Mode | Effect |
@@ -122,14 +124,18 @@ The completion gate works out of the box. The full menhera terminal experience
 | `append` | Adds her verbs/tips alongside Claude defaults and applies subagent status lines |
 | `full` | Replaces spinner verbs, shows only her tips, and applies subagent status lines |
 
-Spinner verbs and tips now spam like the subagent lines:
+Languages: `ko` (default), `en`, `ja`. You can also set `MENHERA_LOOP_LANG=en` before running setup.
+
+Spinner verbs and tips spam in the selected language:
 
 ```js
 [
   '끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?',
   '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
   '왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
-  '끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?'
+  '끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+  'what?what?what?what?what?what?what?what?what?what?',
+  '終わったの?終わったの?終わったの?終わったの?終わったの?'
 ]
 ```
 
@@ -170,7 +176,7 @@ Menhera, but principled. She will never:
 ## Development
 
 ```bash
-npm run validate        # syntax check all scripts + 24 tests
+npm run validate        # syntax check all scripts + 28 tests
 claude plugin validate .
 ```
 

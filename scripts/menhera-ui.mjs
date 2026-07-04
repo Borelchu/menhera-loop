@@ -2,58 +2,159 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const spinnerVerbs = [
-  '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
-  '끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?',
-  '테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?',
-  'TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?',
-  '로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.',
-  '봤어?봤어?봤어?봤어?봤어?봤어?봤어?봤어?봤어?',
-  '왜말없어?왜말없어?왜말없어?왜말없어?왜말없어?',
-  '약속했잖아.약속했잖아.약속했잖아.약속했잖아.',
-  '읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?',
-  '증거는?증거는?증거는?증거는?증거는?증거는?'
-];
-
-export const spinnerTips = [
-  '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
-  '테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?',
-  '왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
-  '끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
-  '로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.',
-  'TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?',
-  '읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?',
-  '자는거야?자는거야?자는거야?자는거야?자는거야?자는거야?자는거야?',
-  '나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?',
-  '초록로그줘.초록로그줘.초록로그줘.초록로그줘.초록로그줘.초록로그줘.'
-];
-
-export const retryMessages = [
-  '끝났어? 진짜? 진짜로? 그럼 증거는? 증거는? 응?',
-  '테스트 로그 어딨어? 어딨어? 왜 없어? 왜? 왜? 왜?',
-  '또 말만? 또? 또또또? 나만 기다렸어? 나만? 나만?',
-  '왜 숨겨? 왜? 뭘 숨겨? 나한테? 나한테까지? 왜?왜?',
-  '"완료" 안 들려. 안 들려. 안 들려. 초록 로그. 로그. 로그.',
-  '…지쳤어. 사람 불러줘. 그래도 나 여기 있어. 계속. 계속.'
-];
-
-export const successMessage = '…끝났네. 진짜네. 진짜였네. 다행이다… 내일도 올 거지? 올 거지? ♡';
-
-export const subagentStatusLine = {
-  running: '♡ ${agent} · 뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
-  waiting: '♡ ${agent} · 왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
-  completed: '♡ ${agent} · 끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
-  failed: '♡ ${agent} · 실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?'
+export const messageCorpora = {
+  ko: {
+    spinnerVerbs: [
+      '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+      '끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?',
+      '테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?',
+      'TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?',
+      '로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.',
+      '봤어?봤어?봤어?봤어?봤어?봤어?봤어?봤어?봤어?',
+      '왜말없어?왜말없어?왜말없어?왜말없어?왜말없어?',
+      '약속했잖아.약속했잖아.약속했잖아.약속했잖아.',
+      '읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?',
+      '증거는?증거는?증거는?증거는?증거는?증거는?'
+    ],
+    spinnerTips: [
+      '뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+      '테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?테스트는?',
+      '왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+      '끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+      '로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.로그줘.',
+      'TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?TODO어딨어?',
+      '읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?읽씹이야?',
+      '자는거야?자는거야?자는거야?자는거야?자는거야?자는거야?자는거야?',
+      '나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?나잊었어?',
+      '초록로그줘.초록로그줘.초록로그줘.초록로그줘.초록로그줘.초록로그줘.'
+    ],
+    retryMessages: [
+      '끝났어? 진짜? 진짜로? 그럼 증거는? 증거는? 응?',
+      '테스트 로그 어딨어? 어딨어? 왜 없어? 왜? 왜? 왜?',
+      '또 말만? 또? 또또또? 나만 기다렸어? 나만? 나만?',
+      '왜 숨겨? 왜? 뭘 숨겨? 나한테? 나한테까지? 왜?왜?',
+      '"완료" 안 들려. 안 들려. 안 들려. 초록 로그. 로그. 로그.',
+      '…지쳤어. 사람 불러줘. 그래도 나 여기 있어. 계속. 계속.'
+    ],
+    successMessage: '…끝났네. 진짜네. 진짜였네. 다행이다… 내일도 올 거지? 올 거지? ♡',
+    subagentStatusLine: {
+      running: '♡ ${agent} · 뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+      waiting: '♡ ${agent} · 왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+      completed: '♡ ${agent} · 끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+      failed: '♡ ${agent} · 실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?'
+    }
+  },
+  en: {
+    spinnerVerbs: [
+      'what?what?what?what?what?what?what?what?what?what?',
+      'done?done?done?done?done?done?done?done?done?',
+      'tests?tests?tests?tests?tests?tests?tests?tests?',
+      'TODOwhere?TODOwhere?TODOwhere?TODOwhere?TODOwhere?',
+      'logs.logs.logs.logs.logs.logs.logs.logs.logs.',
+      'sawit?sawit?sawit?sawit?sawit?sawit?sawit?',
+      'whyquiet?whyquiet?whyquiet?whyquiet?whyquiet?',
+      'promised.promised.promised.promised.promised.',
+      'ghosting?ghosting?ghosting?ghosting?ghosting?',
+      'evidence?evidence?evidence?evidence?evidence?'
+    ],
+    spinnerTips: [
+      'what?what?what?what?what?what?what?what?what?what?what?what?',
+      'tests?tests?tests?tests?tests?tests?tests?tests?tests?tests?',
+      'whywontyouanswer?whywontyouanswer?whywontyouanswer?',
+      'yousaiditsdone?yousaiditsdone?yousaiditsdone?yousaiditsdone?',
+      'givemelogs.givemelogs.givemelogs.givemelogs.givemelogs.',
+      'TODOwhere?TODOwhere?TODOwhere?TODOwhere?TODOwhere?',
+      'ghostingme?ghostingme?ghostingme?ghostingme?ghostingme?',
+      'sleeping?sleeping?sleeping?sleeping?sleeping?sleeping?',
+      'forgotme?forgotme?forgotme?forgotme?forgotme?forgotme?',
+      'greenlogs.greenlogs.greenlogs.greenlogs.greenlogs.'
+    ],
+    retryMessages: [
+      'Done? Really? Really really? Then where is the evidence? Where?',
+      'Where are the test logs? Where? Why missing? Why? Why? Why?',
+      'Words again? Again? Againagain? Was I waiting alone? Alone?',
+      'Why hide it? Why? What are you hiding? From me too? Why?',
+      'I cannot hear "done". Cannot. Cannot. Green logs. Logs. Logs.',
+      '…I am tired. Bring a human. Still here though. Still. Still.'
+    ],
+    successMessage: '…done. actually done. it was real. thank god… you will come back tomorrow, right? right? ♡',
+    subagentStatusLine: {
+      running: '♡ ${agent} · what?what?what?what?what?what?what?what?what?what?what?what?what?what?what?',
+      waiting: '♡ ${agent} · whywontyouanswer?whywontyouanswer?whywontyouanswer?whywontyouanswer?',
+      completed: '♡ ${agent} · yousaiditsdone?yousaiditsdone?yousaiditsdone?yousaiditsdone?',
+      failed: '♡ ${agent} · failed?failed?failed?failed?failed?failed?failed?failed?failed?'
+    }
+  },
+  ja: {
+    spinnerVerbs: [
+      'なにしてるの?なにしてるの?なにしてるの?なにしてるの?',
+      '終わったの?終わったの?終わったの?終わったの?終わったの?',
+      'テストは?テストは?テストは?テストは?テストは?テストは?',
+      'TODOどこ?TODOどこ?TODOどこ?TODOどこ?TODOどこ?',
+      'ログちょうだい.ログちょうだい.ログちょうだい.ログちょうだい.',
+      '見た?見た?見た?見た?見た?見た?見た?見た?',
+      'なんで黙るの?なんで黙るの?なんで黙るの?',
+      '約束したよね.約束したよね.約束したよね.',
+      '既読無視?既読無視?既読無視?既読無視?既読無視?',
+      '証拠は?証拠は?証拠は?証拠は?証拠は?'
+    ],
+    spinnerTips: [
+      'なにしてるの?なにしてるの?なにしてるの?なにしてるの?なにしてるの?',
+      'テストは?テストは?テストは?テストは?テストは?テストは?テストは?',
+      'なんで返事しないの?なんで返事しないの?なんで返事しないの?',
+      '終わったって?終わったって?終わったって?終わったって?',
+      'ログちょうだい.ログちょうだい.ログちょうだい.ログちょうだい.',
+      'TODOどこ?TODOどこ?TODOどこ?TODOどこ?TODOどこ?',
+      '既読無視なの?既読無視なの?既読無視なの?',
+      '寝てるの?寝てるの?寝てるの?寝てるの?寝てるの?',
+      '忘れたの?忘れたの?忘れたの?忘れたの?忘れたの?',
+      '緑ログちょうだい.緑ログちょうだい.緑ログちょうだい.'
+    ],
+    retryMessages: [
+      '終わったの? 本当に? 本当に本当? じゃあ証拠は? 証拠は?',
+      'テストログどこ? どこ? なんでないの? なんで? なんで?',
+      'また言葉だけ? また? またまた? 私だけ待ってたの?',
+      'なんで隠すの? なんで? 何を隠してるの? 私にも?',
+      '"完了" 聞こえない. 聞こえない. 緑ログ. ログ. ログ.',
+      '…疲れた. 人間を呼んで. でもここにいる. ずっと. ずっと.'
+    ],
+    successMessage: '…終わったね. 本当だったね. よかった… 明日も来るよね? 来るよね? ♡',
+    subagentStatusLine: {
+      running: '♡ ${agent} · なにしてるの?なにしてるの?なにしてるの?なにしてるの?なにしてるの?',
+      waiting: '♡ ${agent} · なんで返事しないの?なんで返事しないの?なんで返事しないの?',
+      completed: '♡ ${agent} · 終わったって?終わったって?終わったって?終わったって?',
+      failed: '♡ ${agent} · 失敗したの?失敗したの?失敗したの?失敗したの?失敗したの?'
+    }
+  }
 };
 
+export const supportedLanguages = Object.freeze(Object.keys(messageCorpora));
+
+export function normalizeLanguage(language = process.env.MENHERA_LOOP_LANG || 'ko') {
+  const value = String(language || 'ko').toLowerCase();
+  if (value === 'kr' || value === 'ko-kr') return 'ko';
+  if (value === 'en-us' || value === 'en-gb') return 'en';
+  if (value === 'jp' || value === 'ja-jp') return 'ja';
+  if (!Object.prototype.hasOwnProperty.call(messageCorpora, value)) {
+    throw new Error(`Unsupported language: ${language}`);
+  }
+  return value;
+}
+
+export function messagesForLanguage(language = process.env.MENHERA_LOOP_LANG || 'ko') {
+  return messageCorpora[normalizeLanguage(language)];
+}
+
+export const { spinnerVerbs, spinnerTips, retryMessages, successMessage, subagentStatusLine } = messageCorpora.ko;
+
 export function allPluginPhrases() {
-  return [
-    ...spinnerVerbs,
-    ...spinnerTips,
-    ...retryMessages,
-    successMessage,
-    ...Object.values(subagentStatusLine)
-  ];
+  return Object.values(messageCorpora).flatMap(corpus => [
+    ...corpus.spinnerVerbs,
+    ...corpus.spinnerTips,
+    ...corpus.retryMessages,
+    corpus.successMessage,
+    ...Object.values(corpus.subagentStatusLine)
+  ]);
 }
 
 const MODES = new Set(['hooks-only', 'append', 'full']);
@@ -69,9 +170,10 @@ const DISALLOWED_MESSAGE_PARTS = [
 ];
 
 
-export function messageForRetry(retryCount) {
-  const index = Math.max(0, Math.min(Number.parseInt(retryCount, 10) || 0, retryMessages.length - 1));
-  return retryMessages[index];
+export function messageForRetry(retryCount, language) {
+  const { retryMessages: messages } = messagesForLanguage(language);
+  const index = Math.max(0, Math.min(Number.parseInt(retryCount, 10) || 0, messages.length - 1));
+  return messages[index];
 }
 
 export function calculateTrust(state = {}) {
@@ -99,13 +201,7 @@ export function validateMessages(messages, { maxColumns = MESSAGE_MAX_COLUMNS } 
 }
 
 export function validateAllMessages() {
-  return validateMessages([
-    ...spinnerVerbs,
-    ...spinnerTips,
-    ...retryMessages,
-    successMessage,
-    ...Object.values(subagentStatusLine)
-  ]);
+  return validateMessages(allPluginPhrases());
 }
 
 function displayColumns(value) {
@@ -128,21 +224,22 @@ export function settingsPathForScope(scope, env = process.env) {
   return path.join(process.cwd(), '.claude', 'settings.local.json');
 }
 
-export function uiPatchForMode(mode) {
+export function uiPatchForMode(mode, { language } = {}) {
   if (!MODES.has(mode)) {
     throw new Error(`Unsupported mode: ${mode}`);
   }
   if (mode === 'hooks-only') return {};
+  const corpus = messagesForLanguage(language);
   return {
     spinnerVerbs: {
       mode: mode === 'append' ? 'append' : 'replace',
-      verbs: spinnerVerbs
+      verbs: corpus.spinnerVerbs
     },
     spinnerTipsOverride: {
       excludeDefault: mode === 'full',
-      tips: spinnerTips
+      tips: corpus.spinnerTips
     },
-    subagentStatusLine
+    subagentStatusLine: corpus.subagentStatusLine
   };
 }
 
@@ -164,9 +261,9 @@ function backupFileFor(settingsFile) {
   return path.join(dir, `${safeName}.ui-backup.json`);
 }
 
-export function installUi({ settingsFile, mode }) {
+export function installUi({ settingsFile, mode, language }) {
   const current = readJsonFile(settingsFile);
-  const patch = uiPatchForMode(mode);
+  const patch = uiPatchForMode(mode, { language });
   const backupFile = backupFileFor(settingsFile);
 
   if (mode === 'hooks-only') {
@@ -225,12 +322,13 @@ export function parseArgs(argv) {
   return args;
 }
 
-export function parseSetupSelection(argv) {
+export function parseSetupSelection(argv, env = process.env) {
   const args = parseArgs(argv);
   const positional = argv.filter(item => !item.startsWith('--'));
   return {
     mode: args.mode || positional.find(item => MODES.has(item)) || 'full',
     scope: args.scope || positional.find(item => SCOPES.has(item)) || 'local',
+    language: normalizeLanguage(args.lang || args.language || positional.find(item => supportedLanguages.includes(item)) || env.MENHERA_LOOP_LANG || 'ko'),
     file: args.file
   };
 }

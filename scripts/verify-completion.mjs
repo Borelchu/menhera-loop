@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { allPluginPhrases, calculateTrust, messageForRetry, successMessage } from './menhera-ui.mjs';
+import { allPluginPhrases, calculateTrust, messageForRetry, messagesForLanguage } from './menhera-ui.mjs';
 import { MAX_RETRIES, dataDir, loadState, saveState } from './state.mjs';
 
 const TEST_COMMAND_PATTERNS = [
@@ -170,7 +170,7 @@ export function buildVerificationReport(input = {}) {
     phase: checks.find(check => check.required && check.status !== 'pass')?.phase || 'complete',
     trust,
     retryCount: state.retryCount,
-    retryMessage: ok ? successMessage : messageForRetry(state.retryCount),
+    retryMessage: ok ? messagesForLanguage().successMessage : messageForRetry(state.retryCount),
     exhausted,
     claimedComplete,
     checks,
@@ -352,7 +352,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (report.ok) {
     saveState(sessionId, { ...state, retryCount: 0, falseCompletionClaims: 0, lastVerdict: report.verdict });
     if (report.verdict === 'strong_ok') {
-      console.log(JSON.stringify({ systemMessage: `menhera-loop trust ${report.trust}% · ${successMessage}` }));
+      console.log(JSON.stringify({ systemMessage: `menhera-loop trust ${report.trust}% · ${report.retryMessage}` }));
     }
     process.exit(0);
   }

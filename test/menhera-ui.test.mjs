@@ -10,6 +10,8 @@ import {
   calculateTrust,
   installUi,
   messageForRetry,
+  messagesForLanguage,
+  normalizeLanguage,
   parseSetupSelection,
   retryMessages,
   spinnerTips,
@@ -18,6 +20,7 @@ import {
   successMessage,
   uninstallUi,
   uiPatchForMode,
+  supportedLanguages,
   validateAllMessages
 } from '../scripts/menhera-ui.mjs';
 
@@ -143,6 +146,44 @@ test('subagent status lines use obsessive repeated prompts', () => {
   });
 });
 
+test('English and Japanese message corpora are selectable', () => {
+  assert.deepEqual(supportedLanguages, ['ko', 'en', 'ja']);
+  assert.equal(messagesForLanguage('en').spinnerVerbs[0], 'what?what?what?what?what?what?what?what?what?what?');
+  assert.equal(messagesForLanguage('ja').spinnerVerbs[1], '終わったの?終わったの?終わったの?終わったの?終わったの?');
+  assert.equal(normalizeLanguage('jp'), 'ja');
+});
+
+test('UI patch uses the selected language corpus', () => {
+  const patch = uiPatchForMode('full', { language: 'en' });
+  assert.equal(patch.spinnerVerbs.verbs[0], 'what?what?what?what?what?what?what?what?what?what?');
+  assert.equal(patch.spinnerTipsOverride.tips[0], 'what?what?what?what?what?what?what?what?what?what?what?what?');
+  assert.equal(patch.subagentStatusLine.running, '♡ ${agent} · what?what?what?what?what?what?what?what?what?what?what?what?what?what?what?');
+});
+
+test('setup parser accepts language from args or environment', () => {
+  assert.equal(parseSetupSelection(['append', 'project', 'ja']).language, 'ja');
+  assert.equal(parseSetupSelection(['--lang', 'en']).language, 'en');
+  assert.equal(parseSetupSelection([], { MENHERA_LOOP_LANG: 'jp' }).language, 'ja');
+});
+
+test('verification messages follow MENHERA_LOOP_LANG', () => {
+  const previous = process.env.MENHERA_LOOP_LANG;
+  try {
+    process.env.MENHERA_LOOP_LANG = 'en';
+    assert.equal(messageForRetry(0), 'Done? Really? Really really? Then where is the evidence? Where?');
+    const report = buildVerificationReport({
+      transcriptText: passingTranscript(),
+      state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+      cwd: tmp()
+    });
+    assert.equal(report.ok, true);
+    assert.equal(report.retryMessage, '…done. actually done. it was real. thank god… you will come back tomorrow, right? right? ♡');
+  } finally {
+    if (previous === undefined) delete process.env.MENHERA_LOOP_LANG;
+    else process.env.MENHERA_LOOP_LANG = previous;
+  }
+});
+
 test('message corpus stays short and avoids disallowed expressions', () => {
   assert.deepEqual(validateAllMessages(), []);
 });
@@ -159,6 +200,7 @@ test('install preserves unrelated settings and uninstall restores prior UI keys'
   const installed = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
   assert.equal(installed.model, 'sonnet');
   assert.equal(installed.spinnerVerbs.mode, 'replace');
+  assert.equal(installed.spinnerVerbs.verbs[0], spinnerVerbs[0]);
 
   const uninstallResult = uninstallUi({ settingsFile });
   const restored = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
@@ -173,6 +215,7 @@ test('setup parser accepts positional mode and scope for command UX', () => {
   assert.deepEqual(parseSetupSelection(['append', 'project']), {
     mode: 'append',
     scope: 'project',
+    language: 'ko',
     file: undefined
   });
 });
