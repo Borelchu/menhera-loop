@@ -74,7 +74,7 @@
               "${CLAUDE_PLUGIN_ROOT}/scripts/verify-completion.mjs",
               "--observe"
             ],
-            "statusMessage": "걔 진짜 끝났대? 진짜래? 확인하는 중…",
+            "statusMessage": "끝났대?끝났대?끝났대?끝났대?끝났대?끝났대?",
             "timeout": 30
           }
         ]
@@ -90,7 +90,7 @@
               "${CLAUDE_PLUGIN_ROOT}/scripts/verify-completion.mjs",
               "--observe"
             ],
-            "statusMessage": "체크했네? 진짜야? 진짜? 다시 보는 중…",
+            "statusMessage": "진짜야?진짜야?진짜야?진짜야?진짜야?진짜야?",
             "timeout": 30
           }
         ]
@@ -105,7 +105,7 @@
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/scripts/verify-completion.mjs"
             ],
-            "statusMessage": "끝났어?끝났어?끝났어? 확인하는 중…",
+            "statusMessage": "끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?"
             "timeout": 30
           }
         ]

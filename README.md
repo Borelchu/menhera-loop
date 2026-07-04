@@ -16,7 +16,7 @@ and she will not let the session end until every one of them is accounted for.
 ```text
 ⏺ 수정 완료했습니다.
 
-  ✗ 끝났어?끝났어?끝났어? 확인하는 중…
+  ✗ 끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?끝났어?
 
   [MENHERA_LOOP:RETRY:1] 끝났어? 진짜? 진짜로? 그럼 증거는? 증거는? 응?
   trust: 55%
