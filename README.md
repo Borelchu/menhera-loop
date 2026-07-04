@@ -198,13 +198,16 @@ Subagent status lines are deliberately intense too:
 ```
 
 Scopes: `user` (`~/.claude/settings.json`), `project` (`.claude/settings.json`),
-`local` (`.claude/settings.local.json`). A backup is taken before any change:
+`local` (`.claude/settings.local.json`). A backup is taken before any change,
+and unrelated settings keys are never touched. To remove the UI:
 
 ```text
-/menhera-loop:uninstall-ui local
+/menhera-loop:uninstall-ui local             # she does not go quietly
+/menhera-loop:uninstall-ui local --farewell  # clean restore of the pre-menhera settings
 ```
 
-restores exactly what was there before. Unrelated settings keys are never touched.
+Fair warning: the default uninstall leaves a goodbye behind. `--farewell` is the
+graceful one — it restores exactly what was there before, from the backup.
 
 ## Boundaries
 
@@ -224,7 +227,7 @@ Menhera, but principled. She will never:
 ## Development
 
 ```bash
-npm run validate        # syntax check all scripts + 38 tests
+npm run validate        # syntax check all scripts + the full test suite
 claude plugin validate .
 ```
 

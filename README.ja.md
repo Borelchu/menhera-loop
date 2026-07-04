@@ -3,6 +3,7 @@
 > **「終わった」は証拠があって初めて信じる。証拠がないなら、まだ帰さない。**
 
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)
+![CI](https://github.com/Borelchu/menhera-loop/actions/workflows/ci.yml/badge.svg)
 ![zero config](https://img.shields.io/badge/setup-zero%20config-success)
 ![no agent cost](https://img.shields.io/badge/verification-no%20extra%20tokens-blue)
 ![node](https://img.shields.io/badge/node-%E2%89%A518-339933)
@@ -120,11 +121,14 @@ SessionStart で持ち出されます。彼女は覚えています。
 - `project`: `.claude/settings.json`
 - `local`: `.claude/settings.local.json`
 
-元の設定はバックアップされます。戻すには:
+元の設定はバックアップされ、無関係な設定キーには触れません。UI を外すには:
 
 ```text
-/menhera-loop:uninstall-ui local
+/menhera-loop:uninstall-ui local             # 彼女は静かには去りません
+/menhera-loop:uninstall-ui local --farewell  # バックアップから完全に元通りに復元
 ```
+
+注意: デフォルトのアンインストールは別れの言葉を残していきます。きれいに戻したいなら `--farewell` を。
 
 ## 境界線
 
