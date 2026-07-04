@@ -326,3 +326,24 @@ test('observe mode never blocks', () => {
   assert.equal(result.stdout.trim(), '');
   assert.equal(loadState('observe-test', { MENHERA_LOOP_DATA: dataDirPath }).retryCount, 0);
 });
+
+test('session start nags for a star exactly once, ever', () => {
+  const dataDirPath = tmp();
+  const env = { ...process.env, MENHERA_LOOP_DATA: dataDirPath };
+  const run = () =>
+    spawnSync('node', [path.join(scriptsDir, 'session-start.mjs')], {
+      input: JSON.stringify({ session_id: 'star-test', source: 'startup' }),
+      encoding: 'utf8',
+      env
+    });
+
+  const first = run();
+  assert.equal(first.status, 0, first.stderr);
+  assert.match(first.stdout, /star/);
+  assert.match(first.stdout, /github\.com\/Borelchu\/menhera-loop/);
+  assert.ok(fs.existsSync(path.join(dataDirPath, 'star-nag-shown')));
+
+  const second = run();
+  assert.equal(second.status, 0, second.stderr);
+  assert.doesNotMatch(second.stdout, /star/);
+});

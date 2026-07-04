@@ -1,0 +1,203 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1783155069593,
+  "projectRoot": "/Users/chuuuu/Documents/GitHub/11/menhera-loop",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=18",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "npm",
+    "runtime": "Node.js 18"
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": "npm test",
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {
+      "test": "node --test",
+      "validate": "node --check scripts/menhera-ui.mjs && node --check scripts/setup-ui.mjs && node --check scripts/uninstall-ui.mjs && node --check scripts/session-start.mjs && node --check scripts/track-event.mjs && node --check scripts/verify-completion.mjs && node --test"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "scripts",
+      "test"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "commands": {
+      "path": "commands",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1783155069583,
+      "keyFiles": [
+        "setup.md",
+        "uninstall-ui.md"
+      ]
+    },
+    "hooks": {
+      "path": "hooks",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1783155069584,
+      "keyFiles": [
+        "hooks.json"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 6,
+      "lastAccessed": 1783155069586,
+      "keyFiles": [
+        "menhera-ui.mjs",
+        "session-start.mjs",
+        "setup-ui.mjs",
+        "track-event.mjs",
+        "uninstall-ui.mjs"
+      ]
+    },
+    "test": {
+      "path": "test",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1783155069587,
+      "keyFiles": [
+        "menhera-ui.test.mjs"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "menhera-loop-messaging-spec.md",
+      "accessCount": 17,
+      "lastAccessed": 1783163397792,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 6,
+      "lastAccessed": 1783163416341,
+      "type": "file"
+    },
+    {
+      "path": "scripts/menhera-ui.mjs",
+      "accessCount": 5,
+      "lastAccessed": 1783163258764,
+      "type": "file"
+    },
+    {
+      "path": "scripts/session-start.mjs",
+      "accessCount": 5,
+      "lastAccessed": 1783164418223,
+      "type": "file"
+    },
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "accessCount": 5,
+      "lastAccessed": 1783164523584,
+      "type": "file"
+    },
+    {
+      "path": "test/menhera-ui.test.mjs",
+      "accessCount": 4,
+      "lastAccessed": 1783164443480,
+      "type": "file"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "accessCount": 4,
+      "lastAccessed": 1783164522902,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 4,
+      "lastAccessed": 1783164523257,
+      "type": "file"
+    },
+    {
+      "path": "hooks/hooks.json",
+      "accessCount": 3,
+      "lastAccessed": 1783162953526,
+      "type": "file"
+    },
+    {
+      "path": "scripts/verify-completion.mjs",
+      "accessCount": 3,
+      "lastAccessed": 1783163028265,
+      "type": "file"
+    },
+    {
+      "path": "scripts/track-event.mjs",
+      "accessCount": 2,
+      "lastAccessed": 1783155877596,
+      "type": "file"
+    },
+    {
+      "path": "menhera-loop-improvement-plan.md",
+      "accessCount": 2,
+      "lastAccessed": 1783156300178,
+      "type": "file"
+    },
+    {
+      "path": "scripts/state.mjs",
+      "accessCount": 2,
+      "lastAccessed": 1783164400423,
+      "type": "file"
+    },
+    {
+      "path": "scripts/setup-ui.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1783155176595,
+      "type": "file"
+    },
+    {
+      "path": "scripts/uninstall-ui.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1783155177744,
+      "type": "file"
+    },
+    {
+      "path": "commands/setup.md",
+      "accessCount": 1,
+      "lastAccessed": 1783155178116,
+      "type": "file"
+    },
+    {
+      "path": "commands/uninstall-ui.md",
+      "accessCount": 1,
+      "lastAccessed": 1783155178491,
+      "type": "file"
+    },
+    {
+      "path": "scripts/capture-requirements.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1783155858909,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

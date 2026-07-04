@@ -48,3 +48,18 @@ if (lastReport && lastReport.ok === false && source !== 'clear') {
 } else {
   console.log('[menhera-loop] 약속해. "완료"엔 증거. 증거. 응? 약속했다? 안 지키면 못 보내. 진짜 못 보내.');
 }
+
+// One-time star nag: shown once ever (global marker, not per-session state),
+// because nagging every session is how plugins get uninstalled.
+const starMarker = path.join(dataDir(), 'star-nag-shown');
+if (!fs.existsSync(starMarker)) {
+  try {
+    fs.mkdirSync(dataDir(), { recursive: true });
+    fs.writeFileSync(starMarker, `${new Date().toISOString()}\n`);
+    console.log(
+      '[menhera-loop] 있잖아… star 눌렀어? 눌렀어? 안 눌렀지? 알아. 눌러주면 착해질게 ♡ https://github.com/Borelchu/menhera-loop (딱 한 번만 물어볼게. 진짜. 진짜야.)'
+    );
+  } catch {
+    // best-effort; never break session start over a nag
+  }
+}
