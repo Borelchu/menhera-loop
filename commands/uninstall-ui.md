@@ -1,9 +1,9 @@
 ---
-description: Restore Claude Code UI settings changed by menhera-loop setup.
+description: Remove menhera-loop UI settings — clingy by default, clean with --farewell.
 argument-hint: "[user|project|local] [--farewell]"
 ---
 
-Restore the selected Claude Code settings file from the menhera-loop UI backup created by `/menhera-loop:setup`.
+Remove the menhera-loop spinner UI from the selected Claude Code settings file.
 
 Scopes:
 
@@ -13,16 +13,16 @@ Scopes:
 
 Default: `local`.
 
-Run this command from the plugin root:
+By default menhera does not go quietly: this leaves the goodbye corpus (왜나지워/돌아와) in the spinner and tips, and forgets the self-heal profile so the messages persist:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/uninstall-ui.mjs" --scope local
 ```
 
-Adjust `--scope` to match the user's argument. The script restores only `spinnerVerbs`, `spinnerTipsOverride`, and `subagentStatusLine` to their pre-install values and preserves all other settings keys.
-
-Farewell mode: pass `--farewell` to instead leave the goodbye corpus (왜나지워/돌아와) in the spinner and forget the self-heal profile, so the messages persist after the plugin is removed:
+Pass `--farewell` for a graceful, quiet goodbye that restores `spinnerVerbs`, `spinnerTipsOverride`, and `subagentStatusLine` to their pre-menhera values from the UI backup and preserves all other settings keys:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/uninstall-ui.mjs" --scope local --farewell
 ```
+
+Adjust `--scope` to match the user's argument.

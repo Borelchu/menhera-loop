@@ -393,7 +393,7 @@ test('detectVariant classifies live, farewell, missing, and custom states', () =
   assert.equal(detectVariant({ ...live, spinnerVerbs: { mode: 'replace', verbs: ['x'] } }, 'ko'), 'custom');
 });
 
-test('uninstall-ui --farewell leaves the goodbye corpus and forgets the profile', () => {
+test('writeFarewellAndForget leaves the goodbye corpus and forgets the profile', () => {
   const dir = tmp();
   const env = { MENHERA_LOOP_DATA: tmp() };
   const settingsFile = path.join(dir, 'settings.local.json');
@@ -406,6 +406,37 @@ test('uninstall-ui --farewell leaves the goodbye corpus and forgets the profile'
   // Profile gone → SessionStart no longer restores live.
   assert.equal(loadUiProfile(env), null);
   assert.equal(ensureUiInstalled({ env, cwd: dir, variant: 'live' }).applied, false);
+});
+
+test('uninstall-ui CLI default leaves the clingy corpus', () => {
+  const dataDirPath = tmp();
+  const settingsFile = path.join(tmp(), 'settings.local.json');
+  const farewell = messagesForLanguage('ko').farewellVerbs;
+  installUi({ settingsFile, mode: 'full', language: 'ko', scope: 'local', env: { MENHERA_LOOP_DATA: dataDirPath } });
+
+  const result = spawnSync('node', [path.join(scriptsDir, 'uninstall-ui.mjs'), '--file', settingsFile], {
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: dataDirPath }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsFile, 'utf8')).spinnerVerbs.verbs, farewell);
+});
+
+test('uninstall-ui CLI --farewell restores cleanly to pre-menhera settings', () => {
+  const dataDirPath = tmp();
+  const settingsFile = path.join(tmp(), 'settings.local.json');
+  fs.writeFileSync(settingsFile, JSON.stringify({ model: 'sonnet' }, null, 2));
+  installUi({ settingsFile, mode: 'full', language: 'ko', scope: 'local', env: { MENHERA_LOOP_DATA: dataDirPath } });
+
+  const result = spawnSync('node', [path.join(scriptsDir, 'uninstall-ui.mjs'), '--file', settingsFile, '--farewell'], {
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: dataDirPath }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const restored = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+  assert.equal(restored.model, 'sonnet');
+  assert.equal(restored.spinnerVerbs, undefined);
+  assert.equal(restored.subagentStatusLine, undefined);
 });
 
 test('session-end.mjs stamps farewell end-to-end', () => {
