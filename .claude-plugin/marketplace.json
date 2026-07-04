@@ -21,7 +21,10 @@
         "verification",
         "hooks",
         "spinner",
-        "completion"
+        "completion",
+        "statusline",
+        "testing",
+        "menhera"
       ]
     }
   ]

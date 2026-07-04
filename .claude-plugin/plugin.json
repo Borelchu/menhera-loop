@@ -13,7 +13,11 @@
     "plugin",
     "hooks",
     "spinner",
-    "verification"
+    "verification",
+    "completion-gate",
+    "statusline",
+    "testing",
+    "menhera"
   ],
   "commands": "./commands/",
   "skills": "./skills/"
