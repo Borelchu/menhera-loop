@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
+  "name": "menhera-loop-marketplace",
+  "owner": {
+    "name": "Borel"
+  },
+  "description": "Claude Code plugins for obsessive completion verification and menhera-style progress UI.",
+  "version": "0.1.0",
+  "plugins": [
+    {
+      "name": "menhera-loop",
+      "source": "./",
+      "displayName": "menhera-loop",
+      "description": "Menhera-style Claude Code progress messages with exhaustion-gated completion verification.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Borel"
+      },
+      "license": "MIT",
+      "tags": [
+        "verification",
+        "hooks",
+        "spinner",
+        "completion"
+      ]
+    }
+  ]
+}
