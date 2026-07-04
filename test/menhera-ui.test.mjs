@@ -14,6 +14,7 @@ import {
   retryMessages,
   spinnerTips,
   spinnerVerbs,
+  subagentStatusLine,
   successMessage,
   uninstallUi,
   uiPatchForMode,
@@ -101,6 +102,15 @@ test('append mode keeps default tips available', () => {
 
 test('hooks-only mode does not modify spinner settings', () => {
   assert.deepEqual(uiPatchForMode('hooks-only'), {});
+});
+
+test('subagent status lines use obsessive repeated prompts', () => {
+  assert.deepEqual(subagentStatusLine, {
+    running: '♡ ${agent} · 뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+    waiting: '♡ ${agent} · 왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+    completed: '♡ ${agent} · 끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+    failed: '♡ ${agent} · 실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?'
+  });
 });
 
 test('message corpus stays short and avoids disallowed expressions', () => {

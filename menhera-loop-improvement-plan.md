@@ -241,7 +241,7 @@ requirements 게이트의 근본 한계는 "요구사항의 출처가 없다"는
 
 ### 3-5. 배포 품질
 
-- `plugin.json`에 `repository`/`homepage` 추가, author 표기 통일 (plugin.json `Borel` ↔ README `KeonhoChu`)
+- `plugin.json`에 `repository`/`homepage` 추가, author 표기 통일 (plugin.json `Borel` ↔ GitHub `Borelchu`)
 - README에 실제 동작 GIF/스크린샷, 훅 비용 안내(agent 훅 토큰 소모), 요구 Claude Code 최소 버전 명시
 - CI (GitHub Actions): `npm run validate` + `claude plugin validate .`
 - 메시지 코퍼스 다국어화 여지: 현재 한국어 고정 → `MENHERA_LOOP_LANG=en` 코퍼스 분리 구조 마련

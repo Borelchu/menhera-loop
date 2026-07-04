@@ -26,7 +26,7 @@ and she will not let the session end until every one of them is accounted for.
 ## Install
 
 ```text
-/plugin marketplace add KeonhoChu/menhera-loop
+/plugin marketplace add Borelchu/menhera-loop
 /plugin install menhera-loop@menhera-loop-marketplace
 /reload-plugins
 ```
@@ -108,7 +108,7 @@ Retry state persists per session. She remembers.
 ## UI modes
 
 The completion gate works out of the box. The full menhera terminal experience
-(spinner verbs, tips, subagent lines) is opt-in:
+(spinner verbs, tips, and obsessive subagent status lines) is opt-in:
 
 ```text
 /menhera-loop:setup full local
@@ -116,9 +116,20 @@ The completion gate works out of the box. The full menhera terminal experience
 
 | Mode | Effect |
 |---|---|
-| `hooks-only` | Gate + hook status messages only; spinner untouched |
-| `append` | Adds her verbs/tips alongside Claude defaults |
-| `full` | Replaces spinner verbs, shows only her tips |
+| `hooks-only` | Gate + hook status messages only; spinner/subagent UI untouched |
+| `append` | Adds her verbs/tips alongside Claude defaults and applies subagent status lines |
+| `full` | Replaces spinner verbs, shows only her tips, and applies subagent status lines |
+
+Subagent status lines become deliberately intense:
+
+```js
+{
+  running: '♡ ${agent} · 뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+  waiting: '♡ ${agent} · 왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+  completed: '♡ ${agent} · 끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+  failed: '♡ ${agent} · 실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?'
+}
+```
 
 Scopes: `user` (`~/.claude/settings.json`), `project` (`.claude/settings.json`),
 `local` (`.claude/settings.local.json`). A backup is taken before any change:
@@ -138,7 +149,7 @@ Menhera, but principled. She will never:
 - **Pretend a blocker isn't real.** If completion genuinely needs human-only input
   (credentials, approvals), she says so and lets go — honesty over theater.
 - **Insult or threaten.** The message corpus is test-enforced: no abuse, no self-harm
-  or threat imagery, every line fits one terminal row.
+  or threat imagery; spinner/retry prompts stay compact, while subagent status lines may be intentionally intense.
 - **Touch your project.** All state lives in `~/.claude/menhera-loop/`
   (override with `MENHERA_LOOP_DATA`) — session retry state, a rotated event log,
   and the last verification report. Nothing is written into your working directory.
@@ -146,7 +157,7 @@ Menhera, but principled. She will never:
 ## Development
 
 ```bash
-npm run validate        # syntax check all scripts + 20 tests
+npm run validate        # syntax check all scripts + 22 tests
 claude plugin validate .
 ```
 

@@ -40,10 +40,10 @@ export const retryMessages = [
 export const successMessage = '…끝났네. 진짜네. 진짜였네. 다행이다… 내일도 올 거지? 올 거지? ♡';
 
 export const subagentStatusLine = {
-  running: '♡ ${agent} · 뭐해?뭐해? 하고 지켜보는 중…',
-  waiting: '♡ ${agent} · 답 줘. 답 줘. 하고 기다리는 중…',
-  completed: '♡ ${agent} · 끝났어?진짜?진짜? 확인하는 중…',
-  failed: '♡ ${agent} · 실패했어…? 괜찮아. 안 떠나. 안 떠나.'
+  running: '♡ ${agent} · 뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?뭐해?',
+  waiting: '♡ ${agent} · 왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?왜답안해?',
+  completed: '♡ ${agent} · 끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?끝났다고?',
+  failed: '♡ ${agent} · 실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?실패했어?'
 };
 
 export function allPluginPhrases() {
@@ -58,7 +58,7 @@ export function allPluginPhrases() {
 
 const MODES = new Set(['hooks-only', 'append', 'full']);
 const SCOPES = new Set(['user', 'project', 'local']);
-const MESSAGE_MAX_COLUMNS = 72;
+const MESSAGE_MAX_COLUMNS = 160;
 const DISALLOWED_MESSAGE_PARTS = [
   '죽',
   '자해',
