@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { atomicWriteFileSync, dataDir, loadState, saveState } from './state.mjs';
-import { messagesForLanguage, resolveMessageLanguage } from './menhera-ui.mjs';
+import { messagesForLanguage, resolveIntensity, resolveMessageLanguage } from './menhera-ui.mjs';
 import { classifyPathKind, indicatesFailure, isVerificationCommand } from './verify-completion.mjs';
 
 const MAX_BYTES = 512 * 1024;
@@ -135,7 +135,9 @@ export function silentRecoveryContext(event, state = {}, env = process.env) {
   if (!failure?.signature) return null;
   const previousCount = (state.failures || []).filter(item => item.signature === failure.signature).length;
   const notified = new Set(state.silentRecoveryNotifiedSignatures || []);
-  const shouldNotify = previousCount >= 1 && !notified.has(failure.signature);
+  // soft intensity: keep recording failures, never inject the nag (and leave
+  // the signature unmarked so switching back to full can still fire once).
+  const shouldNotify = previousCount >= 1 && !notified.has(failure.signature) && resolveIntensity(env) !== 'soft';
   const nextState = applyEventToState(state, redactSecrets(event), env);
   if (shouldNotify) {
     nextState.silentRecoveryNotifiedSignatures = [...notified, failure.signature].slice(-100);

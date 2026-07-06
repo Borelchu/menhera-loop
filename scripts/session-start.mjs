@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanupOldSessions, dataDir, loadTrustProfile, resetState, trustProfilePath } from './state.mjs';
-import { ensureUiInstalled, loadUiProfile, messagesForLanguage, normalizeLanguage } from './menhera-ui.mjs';
+import { ensureUiInstalled, loadUiProfile, messagesForLanguage, normalizeLanguage, resolveIntensity } from './menhera-ui.mjs';
 
 const STAR_URL = 'https://github.com/Borelchu/menhera-loop';
 
@@ -104,9 +104,10 @@ try {
 }
 
 // One-time star nag: shown once ever (global marker, not per-session state),
-// because nagging every session is how plugins get uninstalled.
+// because nagging every session is how plugins get uninstalled. soft intensity
+// skips it entirely (marker untouched, so switching back to full shows it once).
 const starMarker = path.join(dataDir(), 'star-nag-shown');
-if (!fs.existsSync(starMarker)) {
+if (resolveIntensity() !== 'soft' && !fs.existsSync(starMarker)) {
   try {
     fs.mkdirSync(dataDir(), { recursive: true });
     fs.writeFileSync(starMarker, `${new Date().toISOString()}\n`);

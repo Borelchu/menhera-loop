@@ -38,7 +38,16 @@ and she will not let the session end until every one of them is accounted for.
 ```
 
 That's it. The gate is armed on install — no API keys, no config files.
-The spinner/tip UI is opt-in (see [UI modes](#ui-modes)).
+
+The spinner/tip UI is opt-in — one command turns it on (details in [UI modes](#ui-modes)):
+
+```text
+/menhera-loop:setup          # spinner + tips + trust statusline (full local ko)
+/menhera-loop:setup en       # same, English corpus
+/menhera-loop:setup soft     # same gate, milder tone
+```
+
+The command prints a short summary of what was applied (mode, scope, language, intensity, and which settings file was touched).
 
 ## Skills
 
@@ -180,6 +189,7 @@ The completion gate works out of the box. The full menhera terminal experience
 
 Languages: `ko` (default), `en`, `ja`. You can also set `MENHERA_LOOP_LANG=en` before running setup.
 Arguments are positional and optional, so `/menhera-loop:setup append user en` still works when you want explicit mode/scope/language.
+Intensity: `full` (default) or `soft`. `/menhera-loop:setup soft` (or `MENHERA_LOOP_INTENSITY=soft`) keeps every gate decision identical — same blocks, same retry cap — but stops the retry tone from escalating past the mild stages and skips the star nag and the silent-recovery nag.
 Note: Claude's `hooks.json` `statusMessage` field is static plugin metadata, so it remains Korean; runtime hook messages and UI corpora honor the selected language.
 
 Spinner verbs and tips spam in the selected language:

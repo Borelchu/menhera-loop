@@ -34,7 +34,16 @@
 ```
 
 インストールすると completion gate はすぐ有効になります。API キーや追加設定は不要です。
-spinner/tip UI は任意設定です。
+
+spinner/tip UI は任意設定で、コマンド一つで有効になります（詳細は「UI モードと言語」）:
+
+```text
+/menhera-loop:setup          # spinner + tips + 信頼度 statusline（full local ko）
+/menhera-loop:setup ja       # 日本語コーパス
+/menhera-loop:setup soft     # 判定は同じ、口調だけ控えめ
+```
+
+実行すると適用内容（mode / scope / 言語 / 強度 / 触った settings ファイル）の短いサマリーが表示されます。
 
 ## スキル
 
@@ -125,6 +134,7 @@ completion gate はインストール直後から動きます。フル UI は任
 SessionStart で持ち出されます。彼女は覚えています。
 
 言語は `ko` / `en` / `ja`。`MENHERA_LOOP_LANG=ja` でも指定できます。
+強度は `full`（デフォルト）/ `soft`。`/menhera-loop:setup soft` または `MENHERA_LOOP_INTENSITY=soft` で、ゲート判定はそのまま（ブロックもリトライ上限も同じ）、リトライ口調のエスカレートと star おねだり・silent-recovery の小言だけ止まります。
 注意: Claude の `hooks.json` の `statusMessage` は静的メタデータなので韓国語固定です。実行時の hook メッセージと UI コーパスは選択した言語に従います。
 
 設定範囲:

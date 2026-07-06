@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2
+
+Intensity release: soft mode lowers her voice, not the gate — and setup finally explains what it did.
+
+### Features
+- Intensity option: `soft` (`/menhera-loop:setup soft`, `--intensity=soft`, or `MENHERA_LOOP_INTENSITY=soft`) keeps every gate decision identical but clamps retry-tone escalation to the mild stages and skips the star nag and silent-recovery injection. Default `full` is unchanged.
+- Setup now prints a localized summary of what was applied (mode, scope, language, intensity, settings file) instead of raw JSON, and the README Install section shows the setup step.
+
 ## v0.5.1
 
 Post-release fixes for the two P1s confirmed in the v0.5.0 review, plus gate-precision cleanups.

@@ -21,7 +21,9 @@ import {
   normalizeLanguage,
   resolveMessageLanguage,
   parseSetupSelection,
+  resolveIntensity,
   retryMessages,
+  saveUiProfile,
   spinnerTips,
   spinnerVerbs,
   statusLineSetting,
@@ -105,9 +107,50 @@ function passingTranscript({ editedFile = 'src/login.js', command = 'npm test', 
 
 test('retry messages escalate and clamp to the exhausted stage', () => {
   assert.equal(messageForRetry(0), retryMessages[0]);
-  assert.equal(messageForRetry(99), retryMessages[retryMessages.length - 1]);
+  assert.equal(messageForRetry(99, undefined, 'full'), retryMessages[retryMessages.length - 1]);
   assert.equal(messageForRetry(-1), retryMessages[0]);
   assert.equal(retryMessages.length, 6);
+});
+
+test('soft intensity clamps retry tone but not the gate arithmetic', () => {
+  assert.equal(messageForRetry(0, 'ko', 'soft'), retryMessages[0]);
+  assert.equal(messageForRetry(99, 'ko', 'soft'), retryMessages[1]);
+});
+
+test('intensity resolves env over saved profile and falls back to full', () => {
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  assert.equal(resolveIntensity(env), 'full');
+  saveUiProfile({ mode: 'full', language: 'ko', intensity: 'soft' }, env);
+  assert.equal(resolveIntensity(env), 'soft');
+  assert.equal(resolveIntensity({ ...env, MENHERA_LOOP_INTENSITY: 'full' }), 'full');
+  assert.equal(resolveIntensity({ ...env, MENHERA_LOOP_INTENSITY: 'extreme' }), 'full');
+  assert.equal(parseSetupSelection(['soft']).intensity, 'soft');
+  assert.equal(parseSetupSelection(['soft']).mode, 'full');
+});
+
+test('soft intensity suppresses star nag and silent recovery injection', () => {
+  const env = { MENHERA_LOOP_DATA: tmp(), MENHERA_LOOP_LANG: 'en', MENHERA_LOOP_INTENSITY: 'soft' };
+  const result = spawnSync('node', [path.join(scriptsDir, 'session-start.mjs')], {
+    input: JSON.stringify({ session_id: 'soft-test', source: 'startup', cwd: tmp() }),
+    encoding: 'utf8',
+    env: { ...process.env, ...env }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /star/i);
+
+  const event = {
+    hook_event_name: 'PostToolUseFailure',
+    tool_name: 'Bash',
+    tool_input: { command: 'npm test' },
+    tool_response: { exit_code: 1, stderr: 'Error at /tmp/a/app.js:1' }
+  };
+  const first = silentRecoveryContext(event, {}, env);
+  assert.equal(first.additionalContext, null);
+  const second = silentRecoveryContext(event, first.nextState, env);
+  assert.equal(second.additionalContext, null);
+  // soft never marked the signature as notified, so full can still fire once.
+  const third = silentRecoveryContext(event, second.nextState, { ...env, MENHERA_LOOP_INTENSITY: 'full' });
+  assert.match(third.additionalContext, /Same failure/);
 });
 
 test('trust is presentation-only arithmetic and never below zero', () => {
@@ -561,11 +604,25 @@ test('session-start self-heals a wiped settings file end-to-end', () => {
   assert.equal(restored.subagentStatusLine.type, 'command');
 });
 
+test('setup prints a short human summary of what was applied', () => {
+  const dir = tmp();
+  const result = spawnSync('node', [path.join(scriptsDir, 'setup-ui.mjs'), 'soft', '--file', path.join(dir, 'settings.json')], {
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: dir }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /mode=full · scope=local · lang=ko · intensity=soft/);
+  assert.match(result.stdout, /목소리만 낮추는 거야/);
+  assert.match(result.stdout, /증거 없으면 못 나가는 거 알지/);
+  assert.doesNotMatch(result.stdout, /"ok"/);
+});
+
 test('setup parser accepts positional mode and scope for command UX', () => {
   assert.deepEqual(parseSetupSelection(['append', 'project']), {
     mode: 'append',
     scope: 'project',
     language: 'ko',
+    intensity: 'full',
     file: undefined
   });
 });

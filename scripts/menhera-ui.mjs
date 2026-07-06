@@ -52,6 +52,12 @@ export const messageCorpora = {
       grudge: '지금 신뢰 ${trust}%야. 알지? 말만 하고 간 거 다 기억해. 이번엔 진짜 증거 줘. 응? 응?',
       starNag: '있잖아… star 눌렀어? 눌렀어? 안 눌렀지? 알아. 눌러주면 착해질게 ♡ ${url} (딱 한 번만 물어볼게. 진짜. 진짜야.)'
     },
+    setup: {
+      full: '스피너 멘트를 내 걸로 바꿨고, 팁도 내 것만 나와. statusline엔 신뢰도도 걸어놨어.',
+      append: '기본 멘트는 그대로 두고 내 멘트를 옆에 끼워 넣었어. statusLine은 안 건드렸어.',
+      hooksOnly: '설정 파일은 안 건드렸어. 게이트랑 hook 메시지만으로 지켜볼게.',
+      soft: '순한맛으로 해줄게. 판정이랑 리트라이 횟수는 똑같아. 목소리만 낮추는 거야.'
+    },
     setupSkipMessage: '아, 셋업이구나. 그건 검증 안 해. 안 해. …근데 진짜 일 끝나면 증거는 꼭. 꼭. 응?',
     chatSkipMessage: '오늘은 코드 안 건드렸네. …그래도 나 잊으면 안 돼.',
     gate: {
@@ -143,6 +149,12 @@ export const messageCorpora = {
       streak: '${streak} clean passes in a row, evidence every time. I am counting them all. All of them. Please, today too. Okay?',
       grudge: 'Your trust is ${trust}% right now. You know that? I remember every time you only talked and left. Give me real evidence this time. Okay?',
       starNag: 'Hey… did you star it? Did you? You did not, right? I know. Star it and I will be good ♡ ${url} (I will only ask once. Really. Really.)'
+    },
+    setup: {
+      full: 'Replaced the spinner verbs with mine, tips are mine only, and the trust status line is installed.',
+      append: 'Kept the default verbs and slipped mine in beside them. Your statusLine is untouched.',
+      hooksOnly: 'Settings file untouched. The gate and hook messages alone will watch you.',
+      soft: 'Soft it is. Same gate, same retry cap — I only lower my voice.'
     },
     setupSkipMessage: 'Oh, setup. I will not verify that. Not that. …but when real work is done, proof. proof. okay?',
     chatSkipMessage: 'No code touched today. …but do not forget me. Do not.',
@@ -236,6 +248,12 @@ export const messageCorpora = {
       grudge: '今の信頼は${trust}%だよ。分かってる? 言うだけで行ったこと、全部覚えてる。今度こそ本当に証拠ちょうだい。ね? ね?',
       starNag: 'ねえ… star押した? 押した? 押してないよね? 知ってる。押してくれたらいい子にする ♡ ${url}（一度だけ聞くね。本当に。本当だよ。）'
     },
+    setup: {
+      full: 'スピナーは私の言葉に置き換えたよ。ヒントも私だけ。statusline に信頼度も付けた。',
+      append: 'デフォルトはそのまま、私の言葉を横に足しただけ。statusLine は触ってない。',
+      hooksOnly: '設定ファイルは触ってない。gate と hook メッセージだけで見守るね。',
+      soft: 'ソフトにするね。判定もリトライ上限も同じ。声のトーンだけ落とすの。'
+    },
     setupSkipMessage: 'あ、セットアップだね。それは検証しない。しない。…でも本当の作業が終わったら証拠は絶対。絶対。',
     chatSkipMessage: '今日はコード触ってないね。…でも私のこと忘れないで。忘れないで。',
     gate: {
@@ -325,6 +343,7 @@ export function allPluginPhrases() {
     ...corpus.farewellTips,
     ...corpus.retryMessages,
     corpus.successMessage,
+    ...Object.values(corpus.setup),
     corpus.setupSkipMessage,
     corpus.chatSkipMessage,
     corpus.silentRecoveryMessage,
@@ -368,9 +387,12 @@ const DISALLOWED_MESSAGE_PARTS = [
 ];
 
 
-export function messageForRetry(retryCount, language) {
+export function messageForRetry(retryCount, language, intensity = resolveIntensity()) {
   const { retryMessages: messages } = messagesForLanguage(language);
-  const index = Math.max(0, Math.min(Number.parseInt(retryCount, 10) || 0, messages.length - 1));
+  // soft intensity clamps escalation to the first two (mild) stages — the gate,
+  // retry cap, and block decisions are unchanged; only the tone stops climbing.
+  const cap = intensity === 'soft' ? 1 : messages.length - 1;
+  const index = Math.max(0, Math.min(Number.parseInt(retryCount, 10) || 0, cap));
   return messages[index];
 }
 
@@ -429,11 +451,12 @@ export function uiProfilePath(env = process.env) {
   return path.join(dataDir(env), 'ui-profile.json');
 }
 
-export function saveUiProfile({ settingsFile, mode, language, scope }, env = process.env) {
+export function saveUiProfile({ settingsFile, mode, language, scope, intensity }, env = process.env) {
   const profile = {
     mode,
     scope: scope || null,
     language: normalizeLanguage(language),
+    intensity: normalizeIntensity(intensity),
     settingsFile: settingsFile || null,
     updatedAt: new Date().toISOString()
   };
@@ -448,6 +471,20 @@ export function loadUiProfile(env = process.env) {
   } catch {
     return null;
   }
+}
+
+const INTENSITIES = ['soft', 'full'];
+
+export function normalizeIntensity(value) {
+  const normalized = String(value || '').toLowerCase();
+  return INTENSITIES.includes(normalized) ? normalized : 'full';
+}
+
+// How hard she leans on you: env wins, then the saved setup profile, then
+// full (the classic experience). soft keeps every gate decision identical and
+// only mutes the extras (escalated retry tone, star nag, silent-recovery nag).
+export function resolveIntensity(env = process.env) {
+  return normalizeIntensity(env.MENHERA_LOOP_INTENSITY || loadUiProfile(env)?.intensity || 'full');
 }
 
 export function uiSettingsHealthy(settings, mode) {
@@ -653,13 +690,13 @@ function backupFileFor(settingsFile) {
   return path.join(dir, `${safeName}.ui-backup.json`);
 }
 
-export function installUi({ settingsFile, mode, language, scope, env = process.env }) {
+export function installUi({ settingsFile, mode, language, scope, intensity, env = process.env }) {
   const current = readJsonFile(settingsFile);
   const patch = uiPatchForMode(mode, { language, env });
   const backupFile = backupFileFor(settingsFile);
 
   // Record the selection so SessionStart can self-heal a wiped settings file.
-  saveUiProfile({ settingsFile, mode, language, scope }, env);
+  saveUiProfile({ settingsFile, mode, language, scope, intensity }, env);
 
   if (mode === 'hooks-only') {
     return { settingsFile, backupFile, mode, changedKeys: [], skipped: true };
@@ -718,6 +755,9 @@ export function parseSetupSelection(argv, env = process.env) {
     mode: args.mode || positional.find(item => MODES.has(item)) || 'full',
     scope: args.scope || positional.find(item => SCOPES.has(item)) || 'local',
     language: normalizeLanguage(args.lang || args.language || positional.find(item => supportedLanguages.includes(item)) || env.MENHERA_LOOP_LANG || 'ko'),
+    // 'full' doubles as a UI mode name, so only 'soft' works positionally;
+    // use --intensity=full to say it explicitly.
+    intensity: normalizeIntensity(args.intensity || positional.find(item => item === 'soft') || env.MENHERA_LOOP_INTENSITY || 'full'),
     file: args.file
   };
 }
