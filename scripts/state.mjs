@@ -8,12 +8,22 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export function dataDir(env = process.env) {
   return env.MENHERA_LOOP_DATA || path.join(os.homedir(), '.claude', 'menhera-loop');
 }
+export function atomicWriteFileSync(file, content) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`);
+  fs.writeFileSync(tmp, content);
+  fs.renameSync(tmp, file);
+}
+
 
 export function emptyState() {
   return {
     retryCount: 0,
     falseCompletionClaims: 0,
     requirements: [],
+    editedFiles: [],
+    verificationRuns: [],
+    failures: [],
     lastVerdict: null,
     updatedAt: null
   };
@@ -35,9 +45,8 @@ export function loadState(sessionId, env = process.env) {
 
 export function saveState(sessionId, state, env = process.env) {
   const file = stateFile(sessionId, env);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
   const next = { ...emptyState(), ...state, updatedAt: new Date().toISOString() };
-  fs.writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
+  atomicWriteFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
   return next;
 }
 
@@ -75,9 +84,8 @@ export function loadTrustProfile(env = process.env) {
 
 export function saveTrustProfile(profile, env = process.env) {
   const file = trustProfilePath(env);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
   const next = { ...emptyTrustProfile(), ...profile, updatedAt: new Date().toISOString() };
-  fs.writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
+  atomicWriteFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
   return next;
 }
 
@@ -85,7 +93,7 @@ function clampTrust(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-export function recordGateOutcome({ outcome, firstTry = false, falseClaim = false }, env = process.env) {
+export function recordGateOutcome({ outcome, firstTry = false, falseClaim = false, missingEvidence = [], failedChecks = [], untriedChecks = [], sessionId = null }, env = process.env) {
   const profile = loadTrustProfile(env);
   if (outcome === 'pass') {
     profile.trust = clampTrust(profile.trust + (firstTry ? 5 : 2));
@@ -103,7 +111,18 @@ export function recordGateOutcome({ outcome, firstTry = false, falseClaim = fals
     return profile;
   }
   profile.lastOutcome = outcome;
+  appendGateEvent({ outcome, firstTry, falseClaim, missingEvidence, failedChecks, untriedChecks, sessionId }, env);
   return saveTrustProfile(profile, env);
+}
+
+function appendGateEvent(event, env = process.env) {
+  try {
+    const file = path.join(dataDir(env), 'gate-events.jsonl');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, `${JSON.stringify({ ...event, at: new Date().toISOString() })}\n`);
+  } catch {
+    // Telemetry is best-effort and must never break hooks.
+  }
 }
 
 export function cleanupOldSessions(env = process.env, now = Date.now()) {

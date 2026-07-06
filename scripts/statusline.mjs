@@ -19,6 +19,20 @@ function readJson(file) {
   }
 }
 
+function sessionFile(sessionId, env = process.env) {
+  const safe = String(sessionId || 'unknown').replace(/[^A-Za-z0-9_-]/g, '_');
+  return path.join(dataDir(env), 'sessions', `${safe}.json`);
+}
+
+function hasRecentSessionState(sessionId, maxAgeMs = 6 * 60 * 60 * 1000) {
+  try {
+    const stat = fs.statSync(sessionFile(sessionId));
+    return Date.now() - stat.mtimeMs <= maxAgeMs;
+  } catch {
+    return false;
+  }
+}
+
 function readStdin() {
   return new Promise(resolve => {
     if (process.stdin.isTTY) {
@@ -64,7 +78,7 @@ try {
 const config = readJson(path.join(dataDir(), 'ui-config.json'));
 if (!config) process.exit(0);
 
-if (config.variant === 'farewell' && typeof config.farewellStatusLine === 'string') {
+if (config.variant === 'farewell' && typeof config.farewellStatusLine === 'string' && !hasRecentSessionState(input.session_id)) {
   process.stdout.write(`${config.farewellStatusLine}\n`);
   process.exit(0);
 }
@@ -72,8 +86,7 @@ if (config.variant === 'farewell' && typeof config.farewellStatusLine === 'strin
 const moods = config.statusLine;
 if (!moods || typeof moods !== 'object') process.exit(0);
 
-const safeSession = String(input.session_id || 'unknown').replace(/[^A-Za-z0-9_-]/g, '_');
-const state = readJson(path.join(dataDir(), 'sessions', `${safeSession}.json`)) || {};
+const state = readJson(sessionFile(input.session_id)) || {};
 const profile = readJson(path.join(dataDir(), 'trust-profile.json')) || { trust: 100, streak: 0 };
 
 // While the gate is actively docking this session, show the session trust the

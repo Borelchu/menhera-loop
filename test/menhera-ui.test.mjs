@@ -35,12 +35,16 @@ import {
 
 import {
   buildVerificationReport,
+  classifyPathKind,
   extractRequirements,
   indicatesFailure,
-  parseTranscript
+  isMutatingCommand,
+  parseTranscript,
+  detectPromiseNoAct
 } from '../scripts/verify-completion.mjs';
 
 import {
+  atomicWriteFileSync,
   emptyState,
   loadState,
   loadTrustProfile,
@@ -50,7 +54,9 @@ import {
   MAX_RETRIES
 } from '../scripts/state.mjs';
 
-import { requirementsFromPrompt } from '../scripts/capture-requirements.mjs';
+import { isImplementationPrompt, preflightContractForPrompt, requirementsFromPrompt } from '../scripts/capture-requirements.mjs';
+import { applyEventToState, normalizeFailureSignature, redactSecrets, silentRecoveryContext } from '../scripts/track-event.mjs';
+import { summarizeGateEvents } from '../scripts/gate-stats.mjs';
 
 const scriptsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scripts');
 
@@ -62,7 +68,7 @@ function transcriptLine(entry) {
   return JSON.stringify(entry);
 }
 
-function passingTranscript({ editedFile = 'src/login.js', testOutput = '12 passed, 0 failed', userText = '로그인 버그 고쳐줘', assistantText = '로그인 버그 수정 완료. 테스트 12개 통과했어요.' } = {}) {
+function passingTranscript({ editedFile = 'src/login.js', command = 'npm test', isError = false, testOutput = '12 passed, 0 failed', userText = '로그인 버그 고쳐줘', assistantText = '로그인 버그 수정 완료. 테스트 12개 통과했어요.' } = {}) {
   return [
     transcriptLine({ type: 'user', message: { role: 'user', content: userText } }),
     transcriptLine({
@@ -76,14 +82,14 @@ function passingTranscript({ editedFile = 'src/login.js', testOutput = '12 passe
       type: 'assistant',
       message: {
         role: 'assistant',
-        content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'npm test' } }]
+        content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command } }]
       }
     }),
     transcriptLine({
       type: 'user',
       message: {
         role: 'user',
-        content: [{ type: 'tool_result', tool_use_id: 't2', is_error: false, content: testOutput }]
+        content: [{ type: 'tool_result', tool_use_id: 't2', is_error: isError, content: testOutput }]
       }
     }),
     transcriptLine({
@@ -168,6 +174,12 @@ test('English and Japanese message corpora are selectable', () => {
   assert.equal(messagesForLanguage('en').spinnerVerbs[0], 'what?what?what?what?what?what?what?what?what?what?');
   assert.equal(messagesForLanguage('ja').spinnerVerbs[1], '終わったの?終わったの?終わったの?終わったの?終わったの?');
   assert.equal(normalizeLanguage('jp'), 'ja');
+  for (const language of supportedLanguages) {
+    const corpus = messagesForLanguage(language);
+    assert.equal(typeof corpus.gate.checks.verification, 'string');
+    assert.equal(typeof corpus.gate.summaries.passed, 'string');
+    assert.equal(typeof corpus.gate.blockInstruction, 'string');
+  }
 });
 
 test('message language is auto-detected from text when not configured', () => {
@@ -363,6 +375,36 @@ test('ensureUiInstalled restores UI keys wiped from the settings file', () => {
   assert.equal(restored.subagentStatusLine.type, 'command');
 });
 
+test('ensureUiInstalled does not reinterpret local profile in another cwd', () => {
+  const dir = tmp();
+  const other = tmp();
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  const settingsFile = path.join(dir, '.claude', 'settings.local.json');
+  const otherSettingsFile = path.join(other, '.claude', 'settings.local.json');
+
+  installUi({ settingsFile, mode: 'full', language: 'ko', scope: 'local', env });
+  fs.mkdirSync(path.dirname(otherSettingsFile), { recursive: true });
+  fs.writeFileSync(otherSettingsFile, JSON.stringify({ model: 'other' }, null, 2));
+
+  const result = ensureUiInstalled({ env, cwd: other });
+  assert.equal(result.applied, false);
+  assert.equal(result.settingsFile, settingsFile);
+  assert.equal(JSON.parse(fs.readFileSync(otherSettingsFile, 'utf8')).spinnerVerbs, undefined);
+});
+
+test('applyUiVariant creates a backup before writing variants', () => {
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  const settingsFile = path.join(tmp(), 'settings.json');
+  fs.writeFileSync(settingsFile, JSON.stringify({ model: 'sonnet' }, null, 2));
+
+  applyUiVariant({ settingsFile, mode: 'full', language: 'ko', variant: 'farewell', env });
+  const backupFile = path.join(path.dirname(settingsFile), '.menhera-loop-backups', 'settings.json.ui-backup.json');
+  const backup = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
+  assert.equal(backup.present.model, undefined);
+  assert.equal(backup.present.spinnerVerbs, false);
+  assert.equal(JSON.parse(fs.readFileSync(settingsFile, 'utf8')).spinnerVerbs.mode, 'replace');
+});
+
 test('ensureUiInstalled is a no-op when settings are already live', () => {
   const dir = tmp();
   const env = { MENHERA_LOOP_DATA: tmp() };
@@ -537,10 +579,37 @@ test('session state persists, increments, and resets', () => {
   assert.deepEqual(loaded.requirements, ['로그인 수정']);
 });
 
+test('state JSON writes use tmp then rename without leaving temp files', () => {
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  saveState('atomic', { ...emptyState(), retryCount: 2 }, env);
+  const sessionDir = path.join(env.MENHERA_LOOP_DATA, 'sessions');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(sessionDir, 'atomic.json'), 'utf8')).retryCount, 2);
+  assert.deepEqual(fs.readdirSync(sessionDir).filter(name => name.includes('.tmp')), []);
+
+  const directFile = path.join(env.MENHERA_LOOP_DATA, 'direct', 'value.json');
+  atomicWriteFileSync(directFile, '{"ok":true}\n');
+  assert.equal(fs.readFileSync(directFile, 'utf8'), '{"ok":true}\n');
+  assert.deepEqual(fs.readdirSync(path.dirname(directFile)).filter(name => name.includes('.tmp')), []);
+});
+
 test('prompt capture extracts list items or falls back to the prompt itself', () => {
   assert.deepEqual(requirementsFromPrompt('- [ ] 테스트 추가\n- [ ] 문서 갱신'), ['테스트 추가', '문서 갱신']);
   assert.deepEqual(requirementsFromPrompt('로그인 버그 고쳐줘'), ['로그인 버그 고쳐줘']);
   assert.deepEqual(requirementsFromPrompt('/menhera-loop:setup full local'), []);
+});
+
+test('prompt capture filters thanks, short replies, and questions', () => {
+  assert.deepEqual(requirementsFromPrompt('고마워'), []);
+  assert.deepEqual(requirementsFromPrompt('이 함수가 뭘 하는 거야?'), []);
+  assert.deepEqual(requirementsFromPrompt('로그인 버그 고쳐줘'), ['로그인 버그 고쳐줘']);
+});
+
+test('preflight contract emits once only for implementation prompts', () => {
+  assert.equal(isImplementationPrompt('로그인 버그 고쳐줘'), true);
+  assert.equal(isImplementationPrompt('이 함수가 뭘 하는 거야?'), false);
+  assert.match(preflightContractForPrompt('로그인 버그 고쳐줘', {}, { MENHERA_LOOP_LANG: 'ko' }), /증거/);
+  assert.equal(preflightContractForPrompt('로그인 버그 고쳐줘', { preflightContractShown: true }, { MENHERA_LOOP_LANG: 'ko' }), null);
+  assert.equal(preflightContractForPrompt('What does this function do?', {}, { MENHERA_LOOP_LANG: 'en' }), null);
 });
 
 test('transcript parser extracts edits, commands, and paired results', () => {
@@ -550,6 +619,93 @@ test('transcript parser extracts edits, commands, and paired results', () => {
   assert.equal(transcript.bashRuns[0].command, 'npm test');
   assert.equal(transcript.bashRuns[0].isError, false);
   assert.match(transcript.bashRuns[0].output, /12 passed/);
+});
+
+function ledgerStateFixture({ editAt = '2026-01-01T00:00:00.000Z', verifyAt = '2026-01-01T00:01:00.000Z', success = true } = {}) {
+  return {
+    ...emptyState(),
+    requirements: ['로그인 버그 고쳐줘'],
+    editedFiles: [{ path: 'src/login.js', kind: 'code', at: editAt }],
+    verificationRuns: [{
+      command: 'npm test',
+      exitCode: success ? 0 : 1,
+      success,
+      output: success ? '12 passed, 0 failed' : '2 tests failed',
+      at: verifyAt
+    }]
+  };
+}
+
+test('ledger and transcript fixtures produce matching verification pass/fail', () => {
+  const cwd = tmp();
+  const passFromTranscript = buildVerificationReport({
+    transcriptText: passingTranscript(),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  const passFromLedger = buildVerificationReport({
+    transcriptText: passingTranscript({ assistantText: '로그인 버그 수정 완료.' }),
+    state: ledgerStateFixture(),
+    cwd
+  });
+  assert.equal(passFromLedger.ok, passFromTranscript.ok);
+  assert.equal(passFromLedger.verdict, passFromTranscript.verdict);
+
+  const failFromTranscript = buildVerificationReport({
+    transcriptText: passingTranscript({ isError: true, testOutput: '2 tests failed' }),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  const failFromLedger = buildVerificationReport({
+    transcriptText: passingTranscript({ assistantText: '로그인 버그 수정 완료.' }),
+    state: ledgerStateFixture({ success: false }),
+    cwd
+  });
+  assert.equal(failFromLedger.ok, failFromTranscript.ok);
+  assert.deepEqual(failFromLedger.failedChecks, failFromTranscript.failedChecks);
+});
+
+test('ledger verification must be newer than the last edit', () => {
+  const report = buildVerificationReport({
+    transcriptText: passingTranscript({ assistantText: '로그인 버그 수정 완료.' }),
+    state: ledgerStateFixture({
+      editAt: '2026-01-01T00:02:00.000Z',
+      verifyAt: '2026-01-01T00:01:00.000Z'
+    }),
+    cwd: tmp()
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.failedChecks.includes('verification'), true);
+  assert.match(report.checks.find(check => check.id === 'verification').reason, /마지막 편집 이후/);
+});
+
+test('PostToolUse ledger records edits, verification, failures, and redacts secrets', () => {
+  let state = emptyState();
+  state = applyEventToState(state, {
+    hook_event_name: 'PostToolUse',
+    tool_name: 'Edit',
+    tool_input: { file_path: 'src/login.js', token: 'secret-token-value' }
+  });
+  state = applyEventToState(state, {
+    hook_event_name: 'PostToolUse',
+    tool_name: 'Bash',
+    tool_input: { command: 'npm test' },
+    tool_response: { exit_code: 0, stdout: '12 passed with sk-abcdefghijklmnopqrstuvwxyz' }
+  });
+  state = applyEventToState(state, {
+    hook_event_name: 'PostToolUseFailure',
+    tool_name: 'Bash',
+    tool_input: { command: 'npm test' },
+    tool_response: { exit_code: 1, stderr: 'Error at /tmp/project/src/login.js:42 token=abc123secret' }
+  });
+
+  assert.deepEqual(state.editedFiles.map(file => ({ path: file.path, kind: file.kind })), [{ path: 'src/login.js', kind: 'code' }]);
+  assert.equal(state.verificationRuns[0].success, true);
+  assert.equal(state.verificationRuns[1].success, false);
+  assert.equal(state.failures.length, 1);
+  assert.equal(normalizeFailureSignature('Error at /tmp/project/src/login.js:42'), normalizeFailureSignature('Error at /x/y/src/login.js:99'));
+  assert.equal(redactSecrets('Authorization: Bearer abcdefghijklmnop'), 'Authorization: Bearer [REDACTED]');
+  assert.equal(redactSecrets({ apiKey: 'abc123' }).apiKey, '[REDACTED]');
 });
 
 test('verification passes with edits, green test run, and matching evidence', () => {
@@ -563,18 +719,79 @@ test('verification passes with edits, green test run, and matching evidence', ()
   assert.equal(report.retryMessage, successMessage);
 });
 
-test('mixed pass/fail output is treated as a failed verification', () => {
+test('failure detector recognizes mixed pass/fail output', () => {
   assert.equal(indicatesFailure('3 passed, 1 failed'), true);
   assert.equal(indicatesFailure('12 passed, 0 failed'), false);
   assert.equal(indicatesFailure('token lookup ok'), false);
+});
+
+test('explicit successful exit code overrides error-looking green output', () => {
+  const report = buildVerificationReport({
+    transcriptText: passingTranscript({ testOutput: '✔ handles error output' }),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd: tmp()
+  });
+  assert.equal(report.ok, true);
+  assert.equal(indicatesFailure('✔ handles error output'), false);
+});
+
+test('unknown exit status falls back to corrected failure text patterns', () => {
+  const transcriptText = [
+    transcriptLine({ type: 'user', message: { role: 'user', content: '로그인 버그 고쳐줘' } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'e1', name: 'Edit', input: { file_path: 'src/login.js' } }] } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'npm test' } }] } }),
+    transcriptLine({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't2', content: '2 tests failed' }] } })
+  ].join('\n');
 
   const report = buildVerificationReport({
-    transcriptText: passingTranscript({ testOutput: '3 passed, 1 failed' }),
+    transcriptText,
     state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
     cwd: tmp()
   });
   assert.equal(report.ok, false);
   assert.equal(report.failedChecks.includes('verification'), true);
+  assert.equal(indicatesFailure('error: cannot find module'), true);
+});
+
+test('read-only shell commands are not treated as attempted work', () => {
+  const transcriptText = [
+    transcriptLine({ type: 'user', message: { role: 'user', content: '코드 상태 확인해줘' } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'git log --oneline' } }] } }),
+    transcriptLine({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'b1', is_error: false, content: 'abc initial' }] } })
+  ].join('\n');
+  const report = buildVerificationReport({ transcriptText, state: emptyState(), cwd: tmp() });
+  assert.equal(isMutatingCommand('git log --oneline'), false);
+  assert.equal(isMutatingCommand('rm -rf build'), true);
+  assert.equal(report.verdict, 'no_work');
+});
+
+test('docs-only edits pass verification without a test run', () => {
+  const transcriptText = [
+    transcriptLine({ type: 'user', message: { role: 'user', content: 'README 설명 업데이트해줘' } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'd1', name: 'Edit', input: { file_path: 'docs/guide.md' } }] } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'README 설명 업데이트 완료.' }] } })
+  ].join('\n');
+  const report = buildVerificationReport({ transcriptText, state: { ...emptyState(), requirements: ['README 설명 업데이트해줘'] }, cwd: tmp() });
+  assert.equal(classifyPathKind('docs/guide.md'), 'docs');
+  assert.equal(report.checks.find(check => check.id === 'verification').status, 'pass');
+});
+
+test('expanded and custom verification command patterns are recognized', () => {
+  const cwd = tmp();
+  const vitest = buildVerificationReport({
+    transcriptText: passingTranscript({ command: 'npx vitest run', testOutput: 'Test Files 1 passed' }),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  assert.equal(vitest.ok, true);
+
+  const custom = buildVerificationReport({
+    transcriptText: passingTranscript({ command: 'moon ci', testOutput: 'all checks passed' }),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd,
+    env: { MENHERA_LOOP_TEST_PATTERNS: 'moon\\s+ci' }
+  });
+  assert.equal(custom.ok, true);
 });
 
 // Built from parts so scanning this test file never counts it as leftover work.
@@ -611,6 +828,30 @@ test('todos gate ignores markers outside comment context', () => {
   assert.equal(report.failedChecks.includes('todos'), false);
 });
 
+test('todos gate checks only added diff lines inside git repositories', () => {
+  const cwd = tmp();
+  fs.mkdirSync(path.join(cwd, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'src', 'login.js'), `// ${todoMarker} legacy\nexport const x = 1;\n`);
+  assert.equal(spawnSync('git', ['init'], { cwd, encoding: 'utf8' }).status, 0);
+  assert.equal(spawnSync('git', ['add', 'src/login.js'], { cwd, encoding: 'utf8' }).status, 0);
+  assert.equal(spawnSync('git', ['-c', 'user.email=a@example.com', '-c', 'user.name=a', 'commit', '-m', 'init'], { cwd, encoding: 'utf8' }).status, 0);
+
+  fs.writeFileSync(path.join(cwd, 'src', 'login.js'), `// ${todoMarker} legacy\nexport const x = 2;\n`);
+  const legacyOnly = buildVerificationReport({
+    transcriptText: passingTranscript(),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  assert.equal(legacyOnly.failedChecks.includes('todos'), false);
+
+  fs.writeFileSync(path.join(cwd, 'src', 'login.js'), `// ${todoMarker} legacy\nexport const x = 2;\n// ${todoMarker} new\n`);
+  const newTodo = buildVerificationReport({
+    transcriptText: passingTranscript(),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  assert.equal(newTodo.failedChecks.includes('todos'), true);
+});
 test('plugin\'s own phrases and prompts do not poison the verdict', () => {
   const poisoned = [
     passingTranscript(),
@@ -717,6 +958,122 @@ test('requirements extraction falls back to the first user prompt', () => {
   assert.deepEqual(extractRequirements(['1. 테스트 추가\n2. 배포']), ['테스트 추가', '배포']);
 });
 
+test('claimed-complete detection does not match abandoned', () => {
+  const report = buildVerificationReport({
+    transcriptText: [
+      transcriptLine({ type: 'user', message: { role: 'user', content: '로그인 버그 고쳐줘' } }),
+      transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'e1', name: 'Edit', input: { file_path: 'src/login.js' } }] } }),
+      transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'abandoned the approach' }] } })
+    ].join('\n'),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd: tmp()
+  });
+  assert.equal(report.claimedComplete, false);
+});
+
+test('promise-no-act detects final future intent without later tools', () => {
+  const promiseOnly = [
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: '이제 테스트 돌릴게.' }] } })
+  ].join('\n');
+  const followedByTool = [
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: '이제 테스트 돌릴게.' }] } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'npm test' } }] } })
+  ].join('\n');
+  const question = [
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: '이제 테스트 돌릴게?' }] } })
+  ].join('\n');
+  assert.equal(detectPromiseNoAct(promiseOnly), true);
+  assert.equal(detectPromiseNoAct(followedByTool), false);
+  assert.equal(detectPromiseNoAct(question), false);
+
+  const line = text => transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } });
+  // Ordinary English sign-offs must not read as an unfulfilled promise.
+  assert.equal(detectPromiseNoAct(line('All 10 tests pass and the fix is committed. Let me know if you need anything else.')), false);
+  assert.equal(detectPromiseNoAct(line("The report is ready. I'll wait for your decision.")), false);
+  // A concrete future action with an action verb still fires.
+  assert.equal(detectPromiseNoAct(line('I will run the tests now.')), true);
+});
+
+test('verification detection anchors runners and mutating verbs to command position', () => {
+  const inspect = buildVerificationReport({
+    transcriptText: passingTranscript({ command: 'cat jest.config.js', testOutput: 'module.exports = {}' }),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd: tmp()
+  });
+  assert.equal(inspect.checks.find(check => check.id === 'verification').status, 'untried');
+  assert.equal(isMutatingCommand('git log --patch'), false);
+  assert.equal(isMutatingCommand('git show --patch -- src/app.js'), false);
+  assert.equal(isMutatingCommand('cd build && rm -rf dist'), true);
+});
+
+test('todos gate catches TODOs in newly created untracked files', () => {
+  const cwd = tmp();
+  spawnSync('git', ['init'], { cwd, encoding: 'utf8' });
+  spawnSync('git', ['-c', 'user.email=a@example.com', '-c', 'user.name=a', 'commit', '--allow-empty', '-m', 'init'], { cwd, encoding: 'utf8' });
+  fs.mkdirSync(path.join(cwd, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'src', 'login.js'), `// ${todoMarker} finish auth\nexport const x = 1;\n`);
+  const report = buildVerificationReport({
+    transcriptText: passingTranscript(),
+    state: { ...emptyState(), requirements: ['로그인 버그 고쳐줘'] },
+    cwd
+  });
+  assert.equal(report.failedChecks.includes('todos'), true);
+});
+
+test('short imperative prompt with green verification is not blocked on requirements', () => {
+  const report = buildVerificationReport({
+    transcriptText: passingTranscript({ userText: 'fix the bug' }),
+    state: emptyState(),
+    cwd: tmp()
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.missingEvidence.includes('requirements'), false);
+});
+
+test('preflight contract is emitted as nested hookSpecificOutput', () => {
+  const result = spawnSync('node', [path.join(scriptsDir, 'capture-requirements.mjs')], {
+    input: JSON.stringify({ session_id: 'preflight-contract', prompt: '로그인 버그 고쳐줘', hook_event_name: 'UserPromptSubmit' }),
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: tmp(), MENHERA_LOOP_LANG: 'ko' }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const out = JSON.parse(result.stdout);
+  assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
+  assert.match(out.hookSpecificOutput.additionalContext, /증거/);
+});
+
+test('silent-recovery reminder is emitted as nested hookSpecificOutput', () => {
+  const env = { ...process.env, MENHERA_LOOP_DATA: tmp(), MENHERA_LOOP_LANG: 'en' };
+  const failEvent = { session_id: 'recovery-contract', hook_event_name: 'PostToolUseFailure', tool_name: 'Bash', tool_input: { command: 'npm test' }, tool_response: { exit_code: 1, stderr: 'Error at /tmp/x/app.js:1' } };
+  const first = spawnSync('node', [path.join(scriptsDir, 'track-event.mjs')], { input: JSON.stringify(failEvent), encoding: 'utf8', env });
+  assert.equal(first.stdout.trim(), '');
+  const second = spawnSync('node', [path.join(scriptsDir, 'track-event.mjs')], {
+    input: JSON.stringify({ ...failEvent, tool_response: { exit_code: 1, stderr: 'Error at /tmp/y/app.js:2' } }),
+    encoding: 'utf8',
+    env
+  });
+  const out = JSON.parse(second.stdout);
+  assert.equal(out.hookSpecificOutput.hookEventName, 'PostToolUseFailure');
+  assert.match(out.hookSpecificOutput.additionalContext, /Same failure/);
+});
+
+test('silent recovery normalizes repeated failures and throttles per signature', () => {
+  const event = {
+    hook_event_name: 'PostToolUseFailure',
+    tool_response: { stderr: 'Error in /tmp/a/src/app.js:123\nfailed' }
+  };
+  assert.equal(normalizeFailureSignature('Error in /tmp/a/src/app.js:123'), 'error in path:#');
+  const first = silentRecoveryContext(event, {}, { MENHERA_LOOP_LANG: 'en' });
+  assert.equal(first.additionalContext, null);
+  const second = silentRecoveryContext({
+    ...event,
+    tool_response: { stderr: 'Error in /tmp/b/src/app.js:456\nfailed' }
+  }, first.nextState, { MENHERA_LOOP_LANG: 'en' });
+  assert.match(second.additionalContext, /Same failure/);
+  const third = silentRecoveryContext(event, second.nextState, { MENHERA_LOOP_LANG: 'en' });
+  assert.equal(third.additionalContext, null);
+});
+
 function runVerifyCli({ hookInput, env }) {
   return spawnSync('node', [path.join(scriptsDir, 'verify-completion.mjs')], {
     input: JSON.stringify(hookInput),
@@ -770,6 +1127,25 @@ test('Stop hook contract: block with decision JSON, escalate retries, release at
   const cappedOut = JSON.parse(capped.stdout);
   assert.equal(cappedOut.decision, undefined);
   assert.match(cappedOut.systemMessage, /지쳤어/);
+  assert.match(cappedOut.systemMessage, /최종 보고/);
+});
+
+test('Stop hook blocks promise-no-act unless stop_hook_active is set', () => {
+  const dataDirPath = tmp();
+  const transcriptFile = path.join(tmp(), 'transcript.jsonl');
+  fs.writeFileSync(transcriptFile, [
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'I will run tests now.' }] } })
+  ].join('\n'));
+
+  const hookInput = { session_id: 'promise-test', transcript_path: transcriptFile, hook_event_name: 'Stop', cwd: tmp() };
+  const blocked = runVerifyCli({ hookInput, env: { MENHERA_LOOP_DATA: dataDirPath, MENHERA_LOOP_LANG: 'en' } });
+  assert.equal(blocked.status, 0, blocked.stderr);
+  assert.equal(JSON.parse(blocked.stdout).decision, 'block');
+  assert.match(JSON.parse(blocked.stdout).reason, /Do not just say it/);
+
+  const active = runVerifyCli({ hookInput: { ...hookInput, stop_hook_active: true }, env: { MENHERA_LOOP_DATA: dataDirPath, MENHERA_LOOP_LANG: 'en' } });
+  assert.equal(active.status, 0, active.stderr);
+  assert.equal(/Do not just say it/.test(active.stdout), false);
 });
 
 test('Stop hook contract: green session resets retry state and celebrates', () => {
@@ -807,6 +1183,22 @@ test('observe mode never blocks', () => {
   assert.equal(loadState('observe-test', { MENHERA_LOOP_DATA: dataDirPath }).retryCount, 0);
 });
 
+test('disable switch exits silently without state or trust writes', () => {
+  const dataDirPath = tmp();
+  const transcriptFile = path.join(tmp(), 'transcript.jsonl');
+  fs.writeFileSync(transcriptFile, passingTranscript({ testOutput: '1 failed' }));
+
+  const result = spawnSync('node', [path.join(scriptsDir, 'verify-completion.mjs')], {
+    input: JSON.stringify({ session_id: 'disabled-test', transcript_path: transcriptFile, hook_event_name: 'Stop' }),
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: dataDirPath, MENHERA_LOOP_DISABLE: '1' }
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), '');
+  assert.equal(fs.existsSync(path.join(dataDirPath, 'trust-profile.json')), false);
+  assert.equal(loadState('disabled-test', { MENHERA_LOOP_DATA: dataDirPath }).retryCount, 0);
+});
+
 test('long-term trust profile rewards passes and punishes empty claims', () => {
   const env = { MENHERA_LOOP_DATA: tmp() };
   assert.equal(loadTrustProfile(env).trust, 100);
@@ -842,6 +1234,22 @@ test('trust profile clamps to [0, 100]', () => {
   assert.equal(recordGateOutcome({ outcome: 'pass', firstTry: true }, env).trust, 100);
 });
 
+test('gate stats summarize block to pass conversion and gate counts', () => {
+  const summary = summarizeGateEvents([
+    { sessionId: 'a', outcome: 'block', missingEvidence: ['verification'], failedChecks: [] },
+    { sessionId: 'a', outcome: 'pass', missingEvidence: [], failedChecks: [] },
+    { sessionId: 'b', outcome: 'block', missingEvidence: ['todos'], failedChecks: ['todos'] },
+    { sessionId: 'b', outcome: 'gave_up', missingEvidence: [], failedChecks: [] }
+  ]);
+  assert.equal(summary.totals.block, 2);
+  assert.equal(summary.totals.pass, 1);
+  assert.equal(summary.sessions.blockToPass, 1);
+  assert.equal(summary.sessions.gaveUp, 1);
+  assert.equal(summary.sessions.blockToPassRate, 0.5);
+  assert.equal(summary.gateCounts.verification, 1);
+  assert.equal(summary.gateCounts.todos, 2);
+});
+
 test('Stop hook records the gate outcome in the long-term trust profile', () => {
   const dataDirPath = tmp();
   const env = { MENHERA_LOOP_DATA: dataDirPath };
@@ -865,6 +1273,10 @@ test('Stop hook records the gate outcome in the long-term trust profile', () => 
   let profile = loadTrustProfile(env);
   assert.equal(profile.blocks, 1);
   assert.equal(profile.trust, 95);
+  const gateEvent = JSON.parse(fs.readFileSync(path.join(dataDirPath, 'gate-events.jsonl'), 'utf8').trim().split('\n')[0]);
+  assert.equal(gateEvent.outcome, 'block');
+  assert.deepEqual(gateEvent.missingEvidence, ['verification']);
+  assert.deepEqual(gateEvent.untriedChecks, ['verification']);
 
   // Green stop on a fresh session: first-try pass starts a streak.
   fs.writeFileSync(transcriptFile, passingTranscript());
@@ -971,6 +1383,17 @@ test('statusline shows the farewell line after a clingy uninstall', () => {
   assert.match(result.stdout, /왜 나 지웠어\?/);
 });
 
+test('statusline keeps live mood for a recent session even with farewell config', () => {
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  installSubagentRenderer({ language: 'ko', env, variant: 'farewell' });
+  saveState('still-live', { ...emptyState(), retryCount: 1 }, env);
+
+  const result = runStatusLine({ input: { session_id: 'still-live' }, env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /신뢰 85%/);
+  assert.doesNotMatch(result.stdout, /왜 나 지웠어\?/);
+});
+
 test('statusline stays silent without config or with garbage input', () => {
   const env = { MENHERA_LOOP_DATA: tmp() };
   const noConfig = runStatusLine({ input: { session_id: 'x' }, env });
@@ -1016,4 +1439,74 @@ test('session start nags for a star exactly once, ever', () => {
   const second = run();
   assert.equal(second.status, 0, second.stderr);
   assert.doesNotMatch(second.stdout, /star/);
+});
+
+test('requirement evidence needs content words, not just function words', () => {
+  const base = { state: { ...emptyState(), requirements: ['add pagination to the users list'] }, cwd: tmp() };
+  const weak = buildVerificationReport({
+    transcriptText: passingTranscript({ userText: 'add pagination to the users list', assistantText: 'refactored the config loader to be simpler.' }),
+    ...base
+  });
+  assert.equal(weak.unverifiedRequirements.length, 1);
+  const strong = buildVerificationReport({
+    transcriptText: passingTranscript({ userText: 'add pagination to the users list', assistantText: 'added pagination to the users list view.' }),
+    ...base
+  });
+  assert.equal(strong.unverifiedRequirements.length, 0);
+});
+
+test('Stop hook reads only the transcript tail', () => {
+  const transcriptFile = path.join(tmp(), 'big.jsonl');
+  const filler = Array.from({ length: 400 }, (_, i) => transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: `progress note ${i} `.repeat(20) }] } })).join('\n');
+  const closing = transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'I will run the tests now.' }] } });
+  fs.writeFileSync(transcriptFile, `${filler}\n${closing}\n`);
+  const result = spawnSync('node', [path.join(scriptsDir, 'verify-completion.mjs')], {
+    input: JSON.stringify({ session_id: 'tail-test', transcript_path: transcriptFile, hook_event_name: 'Stop', cwd: tmp() }),
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: tmp(), MENHERA_LOOP_LANG: 'en', MENHERA_LOOP_TRANSCRIPT_TAIL_BYTES: '2048' }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).decision, 'block');
+  assert.match(JSON.parse(result.stdout).reason, /Do not just say it/);
+});
+
+test('final retry block tells the model to disclose an unverified finish', () => {
+  const env = { MENHERA_LOOP_DATA: tmp() };
+  const transcriptFile = path.join(tmp(), 'transcript.jsonl');
+  fs.writeFileSync(transcriptFile, [
+    transcriptLine({ type: 'user', message: { role: 'user', content: '로그인 버그 고쳐줘' } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'e1', name: 'Edit', input: { file_path: 'src/login.js' } }] } }),
+    transcriptLine({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: '거의 다 됐어요.' }] } })
+  ].join('\n'));
+  saveState('final-retry', { ...emptyState(), requirements: ['로그인 버그 고쳐줘'], retryCount: MAX_RETRIES - 1 }, env);
+  const result = spawnSync('node', [path.join(scriptsDir, 'verify-completion.mjs')], {
+    input: JSON.stringify({ session_id: 'final-retry', transcript_path: transcriptFile, hook_event_name: 'Stop', cwd: tmp() }),
+    encoding: 'utf8',
+    env: { ...process.env, ...env }
+  });
+  const out = JSON.parse(result.stdout);
+  assert.equal(out.decision, 'block');
+  assert.match(out.reason, /\[MENHERA_LOOP:RETRY:5\]/);
+  assert.match(out.reason, /마지막 경고/);
+});
+
+test('ledger marks a failing verification without an exit code as failed', () => {
+  const state = applyEventToState(emptyState(), {
+    hook_event_name: 'PostToolUse',
+    tool_name: 'Bash',
+    tool_input: { command: 'npm test' },
+    tool_response: { stdout: 'Tests: 2 failed, 3 passed' }
+  });
+  assert.equal(state.verificationRuns[0].success, false);
+  assert.equal(state.failures.length, 1);
+});
+
+test('session start greets in the configured language', () => {
+  const result = spawnSync('node', [path.join(scriptsDir, 'session-start.mjs')], {
+    input: JSON.stringify({ session_id: 'lang-test', source: 'startup', cwd: tmp() }),
+    encoding: 'utf8',
+    env: { ...process.env, MENHERA_LOOP_DATA: tmp(), MENHERA_LOOP_LANG: 'en' }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Promise me\./);
 });

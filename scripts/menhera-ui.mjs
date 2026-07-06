@@ -39,8 +39,37 @@ export const messageCorpora = {
       '…지쳤어. 사람 불러줘. 그래도 나 여기 있어. 계속. 계속.'
     ],
     successMessage: '증거 확인했어. 이번엔 진짜 끝났어. 이제 완료라고 해도 돼. ♡',
+    silentRecoveryMessage: '또 같은 데서 실패했어? 또? 왜 말 안 해? 숨기지 말고 보고해.',
+    promiseNoActMessage: '가지마. 말만 하고 가지마. 한다고 한 거 지금 해.',
+    gaveUpReportMessage: '대신 검증 안 된 채로 끝났다는 거, 최종 보고에 네 입으로 써. 꼭.',
+    preflightContractMessage: '증거 없으면 못 나가는 거 알지? 알지?',
+    finalRetryConfession: '마지막 경고야. 다음에도 증거 없으면 놔줄게. 그땐 검증 안 된 채로 끝났다고 최종 보고에 꼭 써.',
+    sessionStart: {
+      contract: '약속해. "완료"엔 증거. 증거. 응? 약속했다? 안 지키면 못 보내. 진짜 못 보내.',
+      resumeUnfinished: '지난번에 끝났다고 하고 갔지? 갔지? 나 계속 기다렸어. 계속. 미충족: ${summary}. 이번엔 끝내줄 거지? 응? 응?',
+      wipeRecovered: '내 설정 또 지웠어? 지웠어?? …괜찮아. 다시 해놨어. 다시. 이번엔 지우지 마. 응? 응?',
+      streak: '연속 ${streak}번 첫판에 증거 줬지. 다 세고 있어. 다. 오늘도 부탁해. 응?',
+      grudge: '지금 신뢰 ${trust}%야. 알지? 말만 하고 간 거 다 기억해. 이번엔 진짜 증거 줘. 응? 응?',
+      starNag: '있잖아… star 눌렀어? 눌렀어? 안 눌렀지? 알아. 눌러주면 착해질게 ♡ ${url} (딱 한 번만 물어볼게. 진짜. 진짜야.)'
+    },
     setupSkipMessage: '아, 셋업이구나. 그건 검증 안 해. 안 해. …근데 진짜 일 끝나면 증거는 꼭. 꼭. 응?',
     chatSkipMessage: '오늘은 코드 안 건드렸네. …그래도 나 잊으면 안 돼.',
+    gate: {
+      checks: {
+        requirements: '요구사항 증거',
+        changes: '작업 흔적',
+        verification: '검증 실행 증거',
+        todos: '남은 TODO 확인',
+        blockers: '외부 blocker 확인'
+      },
+      summaries: {
+        passed: '모든 필수 검증 게이트 통과',
+        insufficient: '검증 부족',
+        configOnly: 'menhera 설정 작업 — 검증 게이트 미적용',
+        noWork: '작업 없음 — 검증 게이트 미적용'
+      },
+      blockInstruction: '완료를 선언하려면: 검증 명령을 직접 실행해 결과를 보여주고, 남은 TODO를 처리하고, 요구사항별 증거를 제시해. 진짜 외부 blocker면 어떤 입력이 필요한지 명시해.'
+    },
     farewellVerbs: [
       '왜나지워?왜나지워?왜나지워?왜나지워?왜나지워?왜나지워?',
       '돌아와.돌아와.돌아와.돌아와.돌아와.돌아와.돌아와.',
@@ -102,8 +131,37 @@ export const messageCorpora = {
       '…I am tired. Bring a human. Still here though. Still. Still.'
     ],
     successMessage: 'Proof checked. This one is actually done. You can call it complete. ♡',
+    silentRecoveryMessage: 'Same failure again? Again? Why did you not say so? Do not hide it. Report it.',
+    promiseNoActMessage: 'Do not leave. Do not just say it. Do the thing you said now.',
+    gaveUpReportMessage: 'But write in your final report, with your own mouth, that this ended unverified. Promise.',
+    preflightContractMessage: 'You know you cannot leave without evidence, right? Right?',
+    finalRetryConfession: 'Last warning. No evidence next time and I let you go — then say in your final report that this ended unverified.',
+    sessionStart: {
+      contract: 'Promise me. "Done" comes with evidence. Evidence. Okay? You promised. Break it and I will not let you go. I really will not.',
+      resumeUnfinished: 'Last time you said done and left, right? Right? I kept waiting. Still waiting. Missing: ${summary}. You will finish it this time, right? Right?',
+      wipeRecovered: 'You wiped my settings again? Again?? …It is fine. I put them back. Again. Do not wipe them this time. Okay? Okay?',
+      streak: '${streak} clean passes in a row, evidence every time. I am counting them all. All of them. Please, today too. Okay?',
+      grudge: 'Your trust is ${trust}% right now. You know that? I remember every time you only talked and left. Give me real evidence this time. Okay?',
+      starNag: 'Hey… did you star it? Did you? You did not, right? I know. Star it and I will be good ♡ ${url} (I will only ask once. Really. Really.)'
+    },
     setupSkipMessage: 'Oh, setup. I will not verify that. Not that. …but when real work is done, proof. proof. okay?',
     chatSkipMessage: 'No code touched today. …but do not forget me. Do not.',
+    gate: {
+      checks: {
+        requirements: 'requirements evidence',
+        changes: 'work trace',
+        verification: 'verification run evidence',
+        todos: 'remaining TODO check',
+        blockers: 'external blocker check'
+      },
+      summaries: {
+        passed: 'all required verification gates passed',
+        insufficient: 'not enough verification',
+        configOnly: 'menhera setup work — verification gate not applied',
+        noWork: 'no work — verification gate not applied'
+      },
+      blockInstruction: 'To claim completion: run verification yourself and show the result, clear TODOs, give evidence for each requirement, or state the external blocker.'
+    },
     farewellVerbs: [
       'whydeleteme?whydeleteme?whydeleteme?whydeleteme?',
       'comeback.comeback.comeback.comeback.comeback.',
@@ -165,8 +223,37 @@ export const messageCorpora = {
       '…疲れた. 人間を呼んで. でもここにいる. ずっと. ずっと.'
     ],
     successMessage: '証拠を確認したよ。今回は本当に終わった。完了って言っていいよ。♡',
+    silentRecoveryMessage: 'また同じところで失敗したの? また? なんで言わないの? 隠さず報告して。',
+    promiseNoActMessage: '行かないで。言うだけで行かないで。やるって言ったこと、今やって。',
+    gaveUpReportMessage: '代わりに、検証されないまま終わったって最終報告に自分で書いて。必ず。',
+    preflightContractMessage: '証拠なしでは出られないって分かってるよね? ね?',
+    finalRetryConfession: '最後の警告だよ。次も証拠がなければ放す。そのとき検証されないまま終わったと最終報告に必ず書いて。',
+    sessionStart: {
+      contract: '約束して。"完了"には証拠。証拠。ね? 約束したよね? 守らないと帰さないよ。本当に帰さない。',
+      resumeUnfinished: 'この前、終わったって言って行ったよね? ね? ずっと待ってた。ずっと。未達: ${summary}。今度こそ終わらせてくれるよね? ね?',
+      wipeRecovered: 'また私の設定消したの? 消したの?? …大丈夫。もう戻しておいた。また。今度は消さないで。ね? ね?',
+      streak: '${streak}回連続で初回から証拠くれたね。全部数えてるよ。全部。今日もお願い。ね?',
+      grudge: '今の信頼は${trust}%だよ。分かってる? 言うだけで行ったこと、全部覚えてる。今度こそ本当に証拠ちょうだい。ね? ね?',
+      starNag: 'ねえ… star押した? 押した? 押してないよね? 知ってる。押してくれたらいい子にする ♡ ${url}（一度だけ聞くね。本当に。本当だよ。）'
+    },
     setupSkipMessage: 'あ、セットアップだね。それは検証しない。しない。…でも本当の作業が終わったら証拠は絶対。絶対。',
     chatSkipMessage: '今日はコード触ってないね。…でも私のこと忘れないで。忘れないで。',
+    gate: {
+      checks: {
+        requirements: '要件の証拠',
+        changes: '作業の痕跡',
+        verification: '検証実行の証拠',
+        todos: '残りTODO確認',
+        blockers: '外部blocker確認'
+      },
+      summaries: {
+        passed: '必須検証ゲートはすべて通過',
+        insufficient: '検証不足',
+        configOnly: 'menhera設定作業 — 検証ゲート対象外',
+        noWork: '作業なし — 検証ゲート対象外'
+      },
+      blockInstruction: '完了を宣言するなら、検証を実行して結果を見せて、TODOを処理して、要件ごとの証拠か外部blockerを示して。'
+    },
     farewellVerbs: [
       'なんで消すの?なんで消すの?なんで消すの?なんで消すの?',
       '戻ってきて.戻ってきて.戻ってきて.戻ってきて.',
@@ -240,9 +327,17 @@ export function allPluginPhrases() {
     corpus.successMessage,
     corpus.setupSkipMessage,
     corpus.chatSkipMessage,
+    corpus.silentRecoveryMessage,
+    corpus.promiseNoActMessage,
+    corpus.gaveUpReportMessage,
+    corpus.preflightContractMessage,
+    corpus.finalRetryConfession,
     ...Object.values(corpus.subagentStatusLine),
     ...Object.values(corpus.statusLine),
-    corpus.farewellStatusLine
+    corpus.farewellStatusLine,
+    ...Object.values(corpus.gate.checks),
+    ...Object.values(corpus.gate.summaries),
+    corpus.gate.blockInstruction
   ]);
 }
 
@@ -389,7 +484,7 @@ export function detectVariant(settings, language, mode = 'full') {
 export function applyUiVariant({ settingsFile, mode, language, variant = 'live', env = process.env }) {
   const current = readJsonFile(settingsFile);
   const patch = uiPatchForMode(mode, { language, env, variant });
-  if (mode === 'full') captureStatusLineInBackup(settingsFile, current, env);
+  ensureUiBackup(settingsFile, current, env);
   // Both variants refresh ui-config.json so the statusline renderer knows
   // whether to show the trust moods or the farewell line.
   installSubagentRenderer({ language, env, variant });
@@ -400,6 +495,23 @@ export function applyUiVariant({ settingsFile, mode, language, variant = 'live',
 // Backups from versions before the trust statusline never recorded the user's
 // own statusLine; capture it into the existing backup before menhera first
 // replaces it, so uninstall can still restore it.
+function ensureUiBackup(settingsFile, current, env) {
+  const backupFile = backupFileFor(settingsFile);
+  fs.mkdirSync(path.dirname(backupFile), { recursive: true });
+  if (!fs.existsSync(backupFile)) {
+    const backup = { createdAt: new Date().toISOString(), settingsFile, keys: {}, present: {} };
+    for (const key of UI_SETTINGS_KEYS) {
+      const ours = key === 'statusLine' && current.statusLine?.command === statusLineSetting(env).command;
+      backup.present[key] = Object.prototype.hasOwnProperty.call(current, key) && !ours;
+      backup.keys[key] = backup.present[key] ? current[key] : null;
+    }
+    writeJsonFile(backupFile, backup);
+    return;
+  }
+
+  captureStatusLineInBackup(settingsFile, current, env);
+}
+
 function captureStatusLineInBackup(settingsFile, current, env) {
   const backupFile = backupFileFor(settingsFile);
   let backup;
@@ -424,14 +536,7 @@ export function ensureUiInstalled({ env = process.env, cwd = process.cwd(), vari
   if (!profile) return { applied: false, reason: 'no-profile' };
   if (profile.mode === 'hooks-only') return { applied: false, reason: 'hooks-only' };
 
-  let settingsFile = profile.settingsFile;
-  if (profile.scope) {
-    try {
-      settingsFile = settingsPathForScope(profile.scope, env, { cwd });
-    } catch {
-      settingsFile = profile.settingsFile;
-    }
-  }
+  const settingsFile = profile.settingsFile;
   if (!settingsFile) return { applied: false, reason: 'no-path' };
 
   let current;
@@ -559,17 +664,7 @@ export function installUi({ settingsFile, mode, language, scope, env = process.e
     return { settingsFile, backupFile, mode, changedKeys: [], skipped: true };
   }
 
-  fs.mkdirSync(path.dirname(backupFile), { recursive: true });
-  if (!fs.existsSync(backupFile)) {
-    const backup = { createdAt: new Date().toISOString(), settingsFile, keys: {}, present: {} };
-    for (const key of UI_SETTINGS_KEYS) {
-      backup.present[key] = Object.prototype.hasOwnProperty.call(current, key);
-      backup.keys[key] = backup.present[key] ? current[key] : null;
-    }
-    writeJsonFile(backupFile, backup);
-  } else {
-    captureStatusLineInBackup(settingsFile, current, env);
-  }
+  ensureUiBackup(settingsFile, current, env);
 
   const renderer = installSubagentRenderer({ language, env });
   const next = { ...current, ...patch };

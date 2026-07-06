@@ -60,12 +60,16 @@ hook は自動で噛みつきますが、手動で呼べるスキルもありま
 
 - バグ修正を依頼 → ファイル編集 → テストなしで「完了」
   → **block**。足りない gate を表示します。
-- `npm test` の出力に `3 passed, 1 failed`
+- `npm test` は成功し、green log に test 名として `error` という単語が出る
+  → **許可**。明示的な成功 exit code を怖い文字列で覆しません。
+- exit status が不明なコマンド出力に `3 passed, 1 failed`
   → **block**。緑っぽい単語の横に赤い数字があれば信じません。
-- 編集したファイルに `// TODO finish auth`
+- `git log` や `ls` など読むだけ
+  → **gate 対象外**。編集または破壊的 shell 作業の後だけ噛みつきます。
+- 追加した行に `// TODO finish auth`
   → **block**。`file:line` 付きで出します。
 - 質問に答えただけで作業していない
-  → **block しません**。作業を試みたときだけ噛みつきます。
+  → **block しません**。
 
 ## Default Claude Code vs `+ menhera-loop`
 
@@ -93,7 +97,11 @@ Stop attempt
 ```
 
 検証コマンドとして認識するもの:
-`npm test` / `npm run test|lint|build|validate`, `pnpm`, `yarn`, `bun`, `node --test`, `pytest`, `cargo test`, `go test`, `claude plugin validate`。
+`npm test` / `npm run test|lint|build|validate`, `pnpm`, `yarn`, `bun`, `node --test`,
+`pytest`, `cargo test`, `go test`, `mvn test`, `gradle test`, `dotnet test`, `rspec`,
+`mix test`, `make test`, `vitest`, `jest`, `playwright`, `cypress`, `tsc --noEmit`,
+`eslint`, `ruff`, `mypy`, `pyright`, `phpunit`, `swift test`, `claude plugin validate`。
+独自 runner は `MENHERA_LOOP_TEST_PATTERNS='moon\\s+ci,just\\s+check'` で追加できます。
 
 ## UI モードと言語
 
@@ -117,6 +125,7 @@ completion gate はインストール直後から動きます。フル UI は任
 SessionStart で持ち出されます。彼女は覚えています。
 
 言語は `ko` / `en` / `ja`。`MENHERA_LOOP_LANG=ja` でも指定できます。
+注意: Claude の `hooks.json` の `statusMessage` は静的メタデータなので韓国語固定です。実行時の hook メッセージと UI コーパスは選択した言語に従います。
 
 設定範囲:
 - `user`: `~/.claude/settings.json`
@@ -132,6 +141,12 @@ SessionStart で持ち出されます。彼女は覚えています。
 
 注意: デフォルトのアンインストールは別れの言葉を残していきます。きれいに戻したいなら `--farewell` を。
 
+推奨順序は `/menhera-loop:uninstall-ui local --farewell` を先に実行し、その後
+`/plugin uninstall menhera-loop` です。順序を逃して farewell UI が残った場合は、
+インストール先 settings（`~/.claude/settings.json`, `.claude/settings.json`,
+`.claude/settings.local.json`）から `spinnerVerbs`, `spinnerTipsOverride`,
+`subagentStatusLine`, `statusLine` を手動で削除してください。
+
 ## 境界線
 
 メンヘラ風ですが、原則があります。
@@ -141,6 +156,17 @@ SessionStart で持ち出されます。彼女は覚えています。
 - **本物の blocker を嘘扱いしない。** 認証情報や承認など、人間だけができることは `human-only` として解放します。
 - **侮辱・脅迫・自傷表現は使わない。** message corpus はテストで検査されます。
 - **作業ディレクトリを汚さない。** 状態は `~/.claude/menhera-loop/` に保存されます（`MENHERA_LOOP_DATA` で変更可）。
+
+escape hatch と正直な限界:
+- `MENHERA_LOOP_DISABLE=1` で Stop hook は無言で終了し、状態も更新しません。
+- 要件照合はまだ transcript evidence の heuristic で、意味論的証明ではありません。
+- docs-only 編集（`docs/**`, README, `.md/.mdx/.rst/.txt/.adoc`）は検証 gate をスキップします。
+
+gate metrics:
+```bash
+node scripts/gate-stats.mjs
+```
+`gate-events.jsonl` から block→pass conversion、gave_up rate、gate counts を出します。
 
 ## Development
 

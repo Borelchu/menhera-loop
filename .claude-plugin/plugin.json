@@ -2,12 +2,14 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "menhera-loop",
   "displayName": "menhera-loop",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Menhera-style Claude Code progress messages focused on missing requirements, verification, and hidden TODOs.",
   "author": {
     "name": "Borel"
   },
   "license": "MIT",
+  "repository": "https://github.com/Borelchu/menhera-loop",
+  "homepage": "https://github.com/Borelchu/menhera-loop#readme",
   "keywords": [
     "claude-code",
     "plugin",

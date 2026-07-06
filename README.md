@@ -66,11 +66,14 @@ Just work normally. She kicks in the moment Claude tries to declare victory:
 
 - Ask for a bug fix → Claude edits a file → Claude says "done" without running tests
   → **blocked.** She quotes exactly which gate is missing.
-- Claude runs `npm test`, output says `3 passed, 1 failed` → **blocked.**
+- Claude runs `npm test`, the command succeeds, and the green log contains the word `error` in a test name → **allowed.**
+  Explicit success beats scary text.
+- Claude runs a command whose exit status is unknown and output says `3 passed, 1 failed` → **blocked.**
   A green word next to a red number does not fool her.
-- Claude leaves `// TODO finish auth` in a file it just edited → **blocked**, with `file:line`.
+- Claude only reads/searches (`git log`, `ls`, `grep`) → **not gated.**
+  She only bites after edits or mutating shell work.
+- Claude leaves `// TODO finish auth` on a line it just added → **blocked**, with `file:line`.
 - You ask a question, Claude just answers, no code touched → **never blocked.**
-  She only bites when work was attempted.
 
 ## Default Claude Code vs `+ menhera-loop`
 
@@ -116,7 +119,10 @@ and her own phrases are filtered out so she can never poison her own verdict.
 
 Verification commands she recognizes: `npm test` / `npm run test|lint|build|validate`,
 `pnpm` / `yarn` / `bun` equivalents, `node --test`, `pytest`, `cargo test`, `go test`,
-`claude plugin validate`.
+`mvn test`, `gradle test`, `dotnet test`, `rspec`, `mix test`, `make test`,
+`vitest`, `jest`, `playwright`, `cypress`, `tsc --noEmit`, `eslint`, `ruff`,
+`mypy`, `pyright`, `phpunit`, `swift test`, and `claude plugin validate`.
+Add project-specific runners with `MENHERA_LOOP_TEST_PATTERNS='moon\\s+ci,just\\s+check'`.
 
 ## Emotional escalation
 
@@ -174,6 +180,7 @@ The completion gate works out of the box. The full menhera terminal experience
 
 Languages: `ko` (default), `en`, `ja`. You can also set `MENHERA_LOOP_LANG=en` before running setup.
 Arguments are positional and optional, so `/menhera-loop:setup append user en` still works when you want explicit mode/scope/language.
+Note: Claude's `hooks.json` `statusMessage` field is static plugin metadata, so it remains Korean; runtime hook messages and UI corpora honor the selected language.
 
 Spinner verbs and tips spam in the selected language:
 
@@ -211,6 +218,13 @@ and unrelated settings keys are never touched. To remove the UI:
 Fair warning: the default uninstall leaves a goodbye behind. `--farewell` is the
 graceful one — it restores exactly what was there before, from the backup.
 
+Recommended removal order: run `/menhera-loop:uninstall-ui local --farewell` first,
+then `/plugin uninstall menhera-loop`. If you uninstall the plugin first and the
+farewell UI is still in Claude settings, manually remove these keys from the
+settings file you installed into (`~/.claude/settings.json`, `.claude/settings.json`,
+or `.claude/settings.local.json`): `spinnerVerbs`, `spinnerTipsOverride`,
+`subagentStatusLine`, `statusLine`.
+
 ## Boundaries
 
 Menhera, but principled. She will never:
@@ -225,6 +239,17 @@ Menhera, but principled. She will never:
   (override with `MENHERA_LOOP_DATA`) — session retry state, the long-term trust
   profile, a rotated event log, and the last verification report. Nothing is
   written into your working directory.
+
+Escape hatches and honest limits:
+- `MENHERA_LOOP_DISABLE=1` makes the Stop hook exit silently and does not update state.
+- Requirement matching is still heuristic transcript evidence, not semantic proof.
+- Docs-only edits (`docs/**`, README, `.md/.mdx/.rst/.txt/.adoc`) skip the verification gate.
+
+Gate metrics:
+```bash
+node scripts/gate-stats.mjs
+```
+It reads `gate-events.jsonl` and reports block→pass conversion, gave_up rate, and gate counts.
 
 ## Development
 

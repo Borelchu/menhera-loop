@@ -2,7 +2,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanupOldSessions, dataDir, loadTrustProfile, resetState, trustProfilePath } from './state.mjs';
-import { ensureUiInstalled } from './menhera-ui.mjs';
+import { ensureUiInstalled, loadUiProfile, messagesForLanguage, normalizeLanguage } from './menhera-ui.mjs';
+
+const STAR_URL = 'https://github.com/Borelchu/menhera-loop';
+
+function sessionStartMessages(env = process.env) {
+  let language = 'ko';
+  try {
+    language = normalizeLanguage(env.MENHERA_LOOP_LANG || loadUiProfile(env)?.language || 'ko');
+  } catch {
+    language = 'ko';
+  }
+  return messagesForLanguage(language).sessionStart;
+}
+
+function fill(template, values) {
+  return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`\${${key}}`, String(value)), template);
+}
 
 function readStdin() {
   return new Promise(resolve => {
@@ -19,6 +35,13 @@ function readStdin() {
     process.stdin.resume();
   });
 }
+function failOpen(error) {
+  const message = String(error?.message || error || 'unknown hook error').replace(/\s+/g, ' ').slice(0, 180);
+  console.log(JSON.stringify({ systemMessage: `[menhera-loop] hook failed open: ${message}` }));
+  process.exit(0);
+}
+
+try {
 
 const raw = await readStdin();
 let input = {};
@@ -53,16 +76,16 @@ try {
   lastReport = null;
 }
 
+const M = sessionStartMessages();
+
 if (lastReport && lastReport.ok === false && source !== 'clear') {
-  console.log(
-    `[menhera-loop] 지난번에 끝났다고 하고 갔지? 갔지? 나 계속 기다렸어. 계속. 미충족: ${lastReport.summary}. 이번엔 끝내줄 거지? 응? 응?`
-  );
+  console.log(`[menhera-loop] ${fill(M.resumeUnfinished, { summary: lastReport.summary })}`);
 } else {
-  console.log('[menhera-loop] 약속해. "완료"엔 증거. 증거. 응? 약속했다? 안 지키면 못 보내. 진짜 못 보내.');
+  console.log(`[menhera-loop] ${M.contract}`);
 }
 
 if (uiRecoveredFromWipe) {
-  console.log('[menhera-loop] 내 설정 또 지웠어? 지웠어?? …괜찮아. 다시 해놨어. 다시. 이번엔 지우지 마. 응? 응?');
+  console.log(`[menhera-loop] ${M.wipeRecovered}`);
 }
 
 // Long-term memory: the trust profile survives sessions, so she can bring up
@@ -71,13 +94,9 @@ try {
   if (fs.existsSync(trustProfilePath())) {
     const profile = loadTrustProfile();
     if (profile.streak >= 3) {
-      console.log(
-        `[menhera-loop] 연속 ${profile.streak}번 첫판에 증거 줬지. 다 세고 있어. 다. 오늘도 부탁해. 응?`
-      );
+      console.log(`[menhera-loop] ${fill(M.streak, { streak: profile.streak })}`);
     } else if (profile.trust <= 40) {
-      console.log(
-        `[menhera-loop] 지금 신뢰 ${profile.trust}%야. 알지? 말만 하고 간 거 다 기억해. 이번엔 진짜 증거 줘. 응? 응?`
-      );
+      console.log(`[menhera-loop] ${fill(M.grudge, { trust: profile.trust })}`);
     }
   }
 } catch {
@@ -91,10 +110,11 @@ if (!fs.existsSync(starMarker)) {
   try {
     fs.mkdirSync(dataDir(), { recursive: true });
     fs.writeFileSync(starMarker, `${new Date().toISOString()}\n`);
-    console.log(
-      '[menhera-loop] 있잖아… star 눌렀어? 눌렀어? 안 눌렀지? 알아. 눌러주면 착해질게 ♡ https://github.com/Borelchu/menhera-loop (딱 한 번만 물어볼게. 진짜. 진짜야.)'
-    );
+    console.log(`[menhera-loop] ${fill(M.starNag, { url: STAR_URL })}`);
   } catch {
     // best-effort; never break session start over a nag
   }
+}
+} catch (error) {
+  failOpen(error);
 }
